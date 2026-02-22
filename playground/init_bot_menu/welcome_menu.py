@@ -3,14 +3,15 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-from employee_menu import employee_kb
-from text_menu import WELCOME_MENU_TEXT, EMPLOYEE_MENU_TEXT
+from text_menu import WELCOME_MENU_TEXT
 
 def welcome_kb():
     kb = ReplyKeyboardBuilder()
     kb.button(text="/grant_role employee")
     kb.button(text="/use_role employee")
-    kb.adjust(1)
+    kb.button(text="/grant_role lead")
+    kb.button(text="/use_role lead")
+    kb.adjust(2, 2)
     return kb.as_markup(resize_keyboard=True)
 
 
@@ -25,13 +26,3 @@ def register_welcome_menu(dp: Dispatcher):
             "/grant_role — заглушка (функционал пока не реализован).",
             reply_markup=welcome_kb(),
         )
-
-    @dp.message(Command("use_role"))
-    async def use_role_handler(message: Message):
-        args = (message.text or "").split(maxsplit=1)
-        role = (args[1].strip() if len(args) > 1 else "").lower()
-
-        if role == "employee":
-            await message.answer(EMPLOYEE_MENU_TEXT, reply_markup=employee_kb())
-        else:
-            await message.answer(WELCOME_MENU_TEXT, reply_markup=welcome_kb())

@@ -3,8 +3,6 @@ from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
-from text_menu import WELCOME_MENU_TEXT
-
 def employee_kb():
     kb = ReplyKeyboardBuilder()
     kb.button(text="/start_work")
@@ -42,7 +40,3 @@ def register_employee_menu(dp: Dispatcher):
     @dp.message(Command("report_comm"))
     async def report_comm(message: Message):
         await message.answer("/report_comm - заглушка(здесь будет реализован функционал просмотра комментария руководителя).", reply_markup=employee_kb())
-
-    @dp.message(Command("exit"))
-    async def exit_to_welcome(message: Message):
-        await message.answer(WELCOME_MENU_TEXT)
