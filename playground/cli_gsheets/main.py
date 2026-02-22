@@ -42,7 +42,7 @@ def main():
         
         insert_one(table, worksheet_title, [message], index=1)
         
-        print(f"Запись '{[message]}' добавлена в лист '{worksheet_title}'")
+        print(f"Запись '{message}' добавлена в лист '{worksheet_title}'")
 
     except Exception as e:
         print(f"Ошибка: {e}")
