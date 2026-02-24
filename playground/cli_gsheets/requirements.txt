@@ -1,3 +1,0 @@
-gspread
-faker
-python-dotenv
