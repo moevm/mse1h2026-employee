@@ -1,15 +1,16 @@
 import asyncio
-from datetime import time
 import logging
 
-from aiogram import Bot, Dispatcher
 
+from datetime import time
+from aiogram import Bot, Dispatcher
 from config import load_config
 from handlers.auth import setup_auth_router
 from handlers.start import router as start_router
 from services.auth_service import AuthService
 from services.google_sheets import GoogleSheetsClient
 from services.reminder_service import ReminderService
+
 
 
 async def main():
@@ -50,6 +51,12 @@ async def main():
         await dp.start_polling(bot)
     finally:
         await reminder_service.stop()
+
+    dp.include_router(start_router)
+    dp.include_router(setup_auth_router(auth_service))
+
+    await dp.start_polling(bot)
+
 
 
 if __name__ == "__main__":
