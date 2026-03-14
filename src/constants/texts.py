@@ -16,4 +16,6 @@ NO_ACCESS_ROLE_TEXT = "У вас нет доступа к этой роли"
 
 AUTH_SUCCESS_TEXT = "Вы успешно авторизовались как: {role}"
 
-ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
+ROLE_REQUEST_CHOOSE_TEXT = "Выберите роль, которую хотите получить:"
+
+ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
