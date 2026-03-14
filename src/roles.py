@@ -16,3 +16,12 @@ class Role(str, Enum):
                 return role
 
         return None
+
+    @property
+    def title(self) -> str:
+        return {
+            Role.LEAD: "руководитель",
+            Role.EMPLOYEE: "сотрудник",
+            Role.INTERN: "стажер",
+            Role.SUPERUSER: "суперпользователь",
+        }[self]
