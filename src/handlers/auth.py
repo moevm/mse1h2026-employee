@@ -1,10 +1,13 @@
+import asyncio
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard
+from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard, get_role_request_keyboard
 from roles import Role
 from services.auth_service import AuthService
 from constants.bot_constants import Callbacks
+from services.role_request_service import RoleRequestService
 from constants.texts import (
     WELCOME_TEXT,
     NO_ROLES_TEXT,
@@ -12,11 +15,12 @@ from constants.texts import (
     UNKNOWN_ROLE_TEXT,
     NO_ACCESS_ROLE_TEXT,
     AUTH_SUCCESS_TEXT,
-    ROLE_REQUEST_NOT_READY_TEXT,
+    ROLE_REQUEST_CHOOSE_TEXT,
+    ROLE_REQUEST_SENT_TEXT
 )
 
 
-def setup_auth_router(auth_service: AuthService):
+def setup_auth_router(auth_service: AuthService, role_request_service: RoleRequestService):
     router = Router()
 
     # кнопка "Авторизация"
@@ -74,7 +78,26 @@ def setup_auth_router(auth_service: AuthService):
     @router.callback_query(F.data == Callbacks.REQUEST_ROLE)
     async def request_role_handler(callback: CallbackQuery):
         await callback.message.edit_text(
-            ROLE_REQUEST_NOT_READY_TEXT,
+            ROLE_REQUEST_CHOOSE_TEXT,
+            reply_markup=get_role_request_keyboard(),
+        )
+        await callback.answer()
+    
+    # выбор желаемой роли
+    @router.callback_query(F.data.startswith(f"{Callbacks.REQUEST_ROLE_SELECT}:"))
+    async def request_role_select_handler(callback: CallbackQuery):
+        tg_id = callback.from_user.id
+        role_str = callback.data.split(":")[1]
+
+        role = Role.from_str(role_str)
+        if role is None:
+            await callback.answer(UNKNOWN_ROLE_TEXT, show_alert=True)
+            return
+
+        await asyncio.to_thread(role_request_service.create_request, tg_id, role)
+
+        await callback.message.edit_text(
+            ROLE_REQUEST_SENT_TEXT.format(role=role.value),
             reply_markup=get_start_menu_keyboard(),
         )
         await callback.answer()
