@@ -30,3 +30,33 @@ def get_roles_keyboard(roles: list[Role]):
     builder.adjust(1)
 
     return builder.as_markup()
+
+
+def get_role_request_keyboard():
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=Buttons.REQUEST_INTERN,
+        callback_data=f"{Callbacks.REQUEST_ROLE_SELECT}:{Role.INTERN.value}",
+    )
+
+    builder.button(
+        text=Buttons.REQUEST_EMPLOYEE,
+        callback_data=f"{Callbacks.REQUEST_ROLE_SELECT}:{Role.EMPLOYEE.value}",
+    )
+
+    builder.button(
+        text=Buttons.REQUEST_LEAD,
+        callback_data=f"{Callbacks.REQUEST_ROLE_SELECT}:{Role.LEAD.value}",
+    )
+
+    builder.button(
+        text=Buttons.REQUEST_SUPERUSER,
+        callback_data=f"{Callbacks.REQUEST_ROLE_SELECT}:{Role.SUPERUSER.value}",
+    )
+
+    builder.button(text=Buttons.BACK, callback_data=Callbacks.BACK)
+
+    builder.adjust(1)
+    
+    return builder.as_markup()
