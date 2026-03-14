@@ -31,5 +31,10 @@ class GoogleSheetsClient:
     def get_all_records(self, sheet_name: str):
         worksheet = self.get_worksheet(sheet_name)
         return worksheet.get_all_records()
-
     
+    def append_row(self, sheet_name: str, values: list[Any]):
+        worksheet = self.get_worksheet(sheet_name)
+        worksheet.append_row(
+            [self._normalize(v) for v in values],
+            value_input_option="USER_ENTERED",
+        )
