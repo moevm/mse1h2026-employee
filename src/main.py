@@ -5,7 +5,12 @@ from aiogram import Bot, Dispatcher
 
 from config import load_config
 from handlers.auth import setup_auth_router
-from handlers.start import router as start_router
+from handlers.common import setup_common_router
+from handlers.employee import setup_employee_router
+from handlers.intern import setup_intern_router
+from handlers.lead import setup_lead_router
+from handlers.start import setup_start_router
+from handlers.superuser import setup_superuser_router
 from services.auth_service import AuthService
 from services.google_sheets import GoogleSheetsClient
 
@@ -34,8 +39,13 @@ async def main():
         roles_sheet_name=config.sheets.roles_sheet_name,
     )
 
-    dp.include_router(start_router)
+    dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service))
+    dp.include_router(setup_common_router(auth_service))
+    dp.include_router(setup_superuser_router(auth_service))
+    dp.include_router(setup_lead_router(auth_service))
+    dp.include_router(setup_employee_router(auth_service))
+    dp.include_router(setup_intern_router(auth_service))
 
     await dp.start_polling(bot)
 
