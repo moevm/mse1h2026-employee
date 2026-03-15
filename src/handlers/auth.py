@@ -1,24 +1,34 @@
+import asyncio
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard
+from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard, get_role_request_keyboard
 from roles import Role
 from services.auth_service import AuthService
 from constants.bot_constants import Callbacks
+from services.role_request_service import RoleRequestService
 from constants.texts import (
-    WELCOME_TEXT,
-    NO_ROLES_TEXT,
     CHOOSE_ROLE_TEXT,
-    UNKNOWN_ROLE_TEXT,
     NO_ACCESS_ROLE_TEXT,
     AUTH_SUCCESS_TEXT,
+    ROLE_REQUEST_CHOOSE_TEXT,
+    ROLE_REQUEST_SENT_TEXT
+    NO_ROLES_TEXT,
     ROLE_REQUEST_NOT_READY_TEXT,
+    ROLE_SELECTED_TEXT,
+    UNKNOWN_ROLE_TEXT,
+    WELCOME_TEXT,
 )
+from handlers.common import get_role_menu
+from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard
+from roles import Role
+from services.auth_service import AuthService
 
 
-def setup_auth_router(auth_service: AuthService):
+def setup_auth_router(auth_service: AuthService, role_request_service: RoleRequestService):
     router = Router()
-
+    
     # кнопка "Авторизация"
     @router.callback_query(F.data == Callbacks.START_AUTH)
     async def start_auth_handler(callback: CallbackQuery):
@@ -43,8 +53,7 @@ def setup_auth_router(auth_service: AuthService):
     @router.callback_query(F.data.startswith(f"{Callbacks.AUTH_ROLE}:"))
     async def choose_role_handler(callback: CallbackQuery):
         tg_id = callback.from_user.id
-        role_str = callback.data.split(":")[1]
-
+        role_str = callback.data.split(":", maxsplit=1)[1]
         role = Role.from_str(role_str)
 
         if role is None:
@@ -55,10 +64,13 @@ def setup_auth_router(auth_service: AuthService):
             await callback.answer(NO_ACCESS_ROLE_TEXT, show_alert=True)
             return
 
-        await callback.message.edit_text(
-            AUTH_SUCCESS_TEXT.format(role=role.value)
-        )
+        auth_service.set_active_role(tg_id, role)
+        menu_text, keyboard = get_role_menu(role)
 
+        await callback.message.edit_text(
+            ROLE_SELECTED_TEXT.format(role=role.title),
+        )
+        await callback.message.answer(menu_text, reply_markup=keyboard)
         await callback.answer()
 
     # кнопка назад
@@ -74,7 +86,26 @@ def setup_auth_router(auth_service: AuthService):
     @router.callback_query(F.data == Callbacks.REQUEST_ROLE)
     async def request_role_handler(callback: CallbackQuery):
         await callback.message.edit_text(
-            ROLE_REQUEST_NOT_READY_TEXT,
+            ROLE_REQUEST_CHOOSE_TEXT,
+            reply_markup=get_role_request_keyboard(),
+        )
+        await callback.answer()
+    
+    # выбор желаемой роли
+    @router.callback_query(F.data.startswith(f"{Callbacks.REQUEST_ROLE_SELECT}:"))
+    async def request_role_select_handler(callback: CallbackQuery):
+        tg_id = callback.from_user.id
+        role_str = callback.data.split(":")[1]
+
+        role = Role.from_str(role_str)
+        if role is None:
+            await callback.answer(UNKNOWN_ROLE_TEXT, show_alert=True)
+            return
+
+        await asyncio.to_thread(role_request_service.create_request, tg_id, role)
+
+        await callback.message.edit_text(
+            ROLE_REQUEST_SENT_TEXT.format(role=role.value),
             reply_markup=get_start_menu_keyboard(),
         )
         await callback.answer()
