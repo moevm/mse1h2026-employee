@@ -13,7 +13,7 @@ from handlers.start import setup_start_router
 from handlers.superuser import setup_superuser_router
 from services.auth_service import AuthService
 from services.google_sheets import GoogleSheetsClient
-
+from services.role_request_service import RoleRequestService
 
 async def main():
     logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,13 @@ async def main():
         roles_sheet_name=config.sheets.roles_sheet_name,
     )
 
+    role_request_service = RoleRequestService(
+        sheets_client=sheets_client,
+        role_requests_sheet_name=config.sheets.role_requests_sheet_name,
+    )
+
+    dp.include_router(start_router)
+    dp.include_router(setup_auth_router(auth_service, role_request_service))
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service))
     dp.include_router(setup_common_router(auth_service))

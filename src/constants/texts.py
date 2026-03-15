@@ -74,4 +74,8 @@ LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике с�
 
 ACTION_CANCELLED_TEXT = "Действие отменено."
 
+ROLE_REQUEST_CHOOSE_TEXT = "Выберите роль, которую хотите получить:"
+
+ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
+
 START_MENU_OPEN_TEXT = "Открываю стартовое меню."
