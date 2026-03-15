@@ -39,6 +39,22 @@ class AuthService:
         unique_roles = list(dict.fromkeys(roles))
         return unique_roles
 
+    def get_user_ids(self):
+        records = self.sheets_client.get_all_records(self.roles_sheet_name)
+
+        tg_ids: list[int] = []
+
+        for row in records:
+            row_tg_id = str(row.get(TG_ID_COLUMN, "")).strip()
+
+            if not row_tg_id:
+                continue
+
+            tg_ids.append(int(row_tg_id))
+
+        unique_ids = list(dict.fromkeys(tg_ids))
+        return unique_ids
+    
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)
 

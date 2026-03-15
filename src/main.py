@@ -1,8 +1,9 @@
 import asyncio
 import logging
 
-from aiogram import Bot, Dispatcher
 
+from datetime import time
+from aiogram import Bot, Dispatcher
 from config import load_config
 from handlers.auth import setup_auth_router
 from handlers.common import setup_common_router
@@ -13,6 +14,7 @@ from handlers.start import setup_start_router
 from handlers.superuser import setup_superuser_router
 from services.auth_service import AuthService
 from services.google_sheets import GoogleSheetsClient
+from services.reminder_service import ReminderService
 from services.role_request_service import RoleRequestService
 
 async def main():
@@ -39,6 +41,21 @@ async def main():
         roles_sheet_name=config.sheets.roles_sheet_name,
     )
 
+    reminder_service = ReminderService(
+        auth_service=auth_service,
+        config=config.reminders,
+    )
+
+    dp.include_router(start_router)
+    dp.include_router(setup_auth_router(auth_service))
+
+    await reminder_service.start(bot)
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await reminder_service.stop()
+
     role_request_service = RoleRequestService(
         sheets_client=sheets_client,
         role_requests_sheet_name=config.sheets.role_requests_sheet_name,
@@ -55,6 +72,7 @@ async def main():
     dp.include_router(setup_intern_router(auth_service))
 
     await dp.start_polling(bot)
+
 
 
 if __name__ == "__main__":

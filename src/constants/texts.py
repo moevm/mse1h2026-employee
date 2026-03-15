@@ -78,4 +78,18 @@ ROLE_REQUEST_CHOOSE_TEXT = "Выберите роль, которую хотит
 
 ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
 
+ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
+
+START_WORK_REMINDER_TEXT = (
+    "🔔 <b>Напоминание</b>\n\n"
+    "Перед началом рабочего дня необходимо отметиться."
+)
+
+END_WORK_REMINDER_TEXT = (
+    "🔔 <b>Напоминание</b>\n\n"
+    "Рабочий день завершается — не забудьте отметиться."
+)
+
+ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
+
 START_MENU_OPEN_TEXT = "Открываю стартовое меню."
