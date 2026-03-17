@@ -1,5 +1,12 @@
-.env
 __pycache__/
-*.pyc
-*.json
+*.py[cod]
+*$py.class
+
+.venv/
+env/
 venv/
+.env
+
+*.log
+credentials.json
+.DS_Store
