@@ -23,9 +23,6 @@ from constants.texts import (
     WELCOME_TEXT,
 )
 from handlers.common import get_role_menu
-from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard
-from roles import Role
-from services.auth_service import AuthService
 
 
 def setup_auth_router(
