@@ -3,7 +3,11 @@ import asyncio
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard, get_role_request_keyboard
+from keyboards.auth_menu import (
+    get_roles_keyboard,
+    get_start_menu_keyboard,
+    get_role_request_keyboard,
+)
 from roles import Role
 from services.auth_service import AuthService
 from constants.bot_constants import Callbacks
@@ -11,24 +15,21 @@ from services.role_request_service import RoleRequestService
 from constants.texts import (
     CHOOSE_ROLE_TEXT,
     NO_ACCESS_ROLE_TEXT,
-    AUTH_SUCCESS_TEXT,
     ROLE_REQUEST_CHOOSE_TEXT,
-    ROLE_REQUEST_SENT_TEXT
+    ROLE_REQUEST_SENT_TEXT,
     NO_ROLES_TEXT,
-    ROLE_REQUEST_NOT_READY_TEXT,
     ROLE_SELECTED_TEXT,
     UNKNOWN_ROLE_TEXT,
     WELCOME_TEXT,
 )
 from handlers.common import get_role_menu
-from keyboards.auth_menu import get_roles_keyboard, get_start_menu_keyboard
-from roles import Role
-from services.auth_service import AuthService
 
 
-def setup_auth_router(auth_service: AuthService, role_request_service: RoleRequestService):
+def setup_auth_router(
+    auth_service: AuthService, role_request_service: RoleRequestService
+):
     router = Router()
-    
+
     # кнопка "Авторизация"
     @router.callback_query(F.data == Callbacks.START_AUTH)
     async def start_auth_handler(callback: CallbackQuery):
@@ -90,7 +91,7 @@ def setup_auth_router(auth_service: AuthService, role_request_service: RoleReque
             reply_markup=get_role_request_keyboard(),
         )
         await callback.answer()
-    
+
     # выбор желаемой роли
     @router.callback_query(F.data.startswith(f"{Callbacks.REQUEST_ROLE_SELECT}:"))
     async def request_role_select_handler(callback: CallbackQuery):

@@ -17,6 +17,7 @@ class AuthService:
     def __init__(self, sheets_client: GoogleSheetsClient, roles_sheet_name: str):
         self.sheets_client = sheets_client
         self.roles_sheet_name = roles_sheet_name
+        self._active_roles: dict[int, Role] = {}
 
     def get_user_roles(self, tg_id: int):
         records = self.sheets_client.get_all_records(self.roles_sheet_name)
@@ -54,7 +55,7 @@ class AuthService:
 
         unique_ids = list(dict.fromkeys(tg_ids))
         return unique_ids
-    
+
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)
 
@@ -72,3 +73,12 @@ class AuthService:
     def can_login_as_role(self, tg_id: int, role: Role):
         user_roles = self.get_user_roles(tg_id)
         return role in user_roles
+
+    def set_active_role(self, tg_id: int, role: Role):
+        self._active_roles[tg_id] = role
+
+    def get_active_role(self, tg_id: int) -> Role | None:
+        return self._active_roles.get(tg_id)
+
+    def logout(self, tg_id: int):
+        self._active_roles.pop(tg_id, None)
