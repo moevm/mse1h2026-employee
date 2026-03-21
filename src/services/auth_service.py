@@ -82,3 +82,6 @@ class AuthService:
 
     def logout(self, tg_id: int):
         self._active_roles.pop(tg_id, None)
+
+    def grant_role(self, tg_id: int, role: Role):
+        self.sheets_client.append_row(self.roles_sheet_name, [tg_id, role.value])
