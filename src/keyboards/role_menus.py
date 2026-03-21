@@ -1,17 +1,23 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from constants.bot_constants import Buttons
 
 
 def get_superuser_menu_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.SUPERUSER_ROLE_REQUESTS)
-    builder.button(text=Buttons.SUPERUSER_CONFIRM_ROLE)
     builder.button(text=Buttons.SUPERUSER_BAN_USER)
     builder.button(text=Buttons.SUPERUSER_LEAD_MENU)
     builder.button(text=Buttons.EXIT)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_role_request_action_keyboard(tg_id: str, role: str):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Подтвердить", callback_data=f"req_approve:{tg_id}:{role}")
+    builder.button(text="Отклонить", callback_data=f"req_deny:{tg_id}:{role}")
+    builder.adjust(2)
+    return builder.as_markup()
 
 
 def get_lead_main_keyboard():
