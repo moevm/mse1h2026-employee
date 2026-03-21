@@ -19,7 +19,6 @@ def get_lead_main_keyboard():
     builder.button(text=Buttons.LEAD_TASKS)
     builder.button(text=Buttons.LEAD_REPORTS)
     builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
-    builder.button(text=Buttons.LEAD_EMPLOYEE_MENU)
     builder.button(text=Buttons.EXIT)
     builder.adjust(2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
