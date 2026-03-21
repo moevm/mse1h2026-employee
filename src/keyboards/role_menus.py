@@ -8,7 +8,6 @@ def get_superuser_menu_keyboard():
     builder.button(text=Buttons.SUPERUSER_ROLE_REQUESTS)
     builder.button(text=Buttons.SUPERUSER_CONFIRM_ROLE)
     builder.button(text=Buttons.SUPERUSER_BAN_USER)
-    builder.button(text=Buttons.SUPERUSER_LEAD_MENU)
     builder.button(text=Buttons.EXIT)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
