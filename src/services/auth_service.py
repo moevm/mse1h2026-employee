@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
-from constants.sheets_constants import ROLE_COLUMN, TG_ID_COLUMN
+from constants.sheets_constants import MANAGER_IDS_COLUMN, ROLE_COLUMN, TG_ID_COLUMN
 from roles import Role
 from services.google_sheets import GoogleSheetsClient
 
@@ -55,6 +56,33 @@ class AuthService:
 
         unique_ids = list(dict.fromkeys(tg_ids))
         return unique_ids
+    
+    def get_manager_ids_for_user(self, tg_id: int, role: Role | None = None):
+        records = self.sheets_client.get_all_records(self.roles_sheet_name)
+
+        manager_ids: list[int] = []
+        normalized_tg_id = str(tg_id).strip()
+
+        for row in records:
+            row_tg_id = str(row.get(TG_ID_COLUMN, "")).strip()
+            row_role = Role.from_str(str(row.get(ROLE_COLUMN, "")).strip())
+
+            if row_tg_id != normalized_tg_id:
+                continue
+
+            if role and row_role != role:
+                continue
+
+            raw_manager_ids = str(row.get(MANAGER_IDS_COLUMN, "")).strip()
+            if not raw_manager_ids:
+                continue
+
+            for value in re.split(r"[,;\n]+", raw_manager_ids):
+                digits = re.sub(r"\D", "", value)
+                if digits:
+                    manager_ids.append(int(digits))
+
+        return list(dict.fromkeys(manager_ids))
 
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)
