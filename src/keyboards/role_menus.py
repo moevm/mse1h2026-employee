@@ -97,3 +97,13 @@ def get_manager_selection_keyboard(manager_usernames: list[str]):
     builder.button(text=Buttons.CANCEL)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_employee_selection_keyboard(employee_names: list[str]):
+    builder = ReplyKeyboardBuilder()
+    for name in employee_names:
+        builder.button(text=name)
+    builder.button(text=Buttons.CANCEL)
+    builder.button(text=Buttons.EXIT)
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
