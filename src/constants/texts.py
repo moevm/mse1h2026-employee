@@ -38,8 +38,17 @@ COMPLETE_TASK_TEXT = "Отправка отчета пока реализова�
 REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
 
 LEAD_TASKS_LIST_TEXT = "Тут будет список задач."
-LEAD_CREATE_TASK_PROMPT = "Введите задачу в формате: task_desc | employee"
-LEAD_CREATE_TASK_SUCCESS = "Задача принята."
+LEAD_CREATE_TASK_TITLE_PROMPT = "Введите название задачи одним сообщением."
+LEAD_CREATE_TASK_DESCRIPTION_PROMPT = (
+    "Введите описание задачи одним сообщением.\n"
+    "Если описание не нужно — отправьте '-'"
+)
+LEAD_CREATE_TASK_DEADLINE_PROMPT = "Выберите дедлайн в календаре."
+LEAD_CREATE_TASK_SELECT_EMPLOYEE_PROMPT = "Выберите сотрудника."
+LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = "Нет сотрудников, прикрепленных к вам."
+LEAD_CREATE_TASK_INVALID_EMPLOYEE_TEXT = "Используйте кнопки ниже."
+LEAD_CREATE_TASK_SUCCESS = "Задача создана."
+LEAD_CREATE_TASK_DEADLINE_SELECTED = "Дедлайн выбран: {deadline}"
 LEAD_REPORTS_LIST_TEXT = "Тут будет список отчетов."
 LEAD_OPEN_REPORT_PROMPT = "Введите report_id одним сообщением."
 LEAD_OPEN_REPORT_SUCCESS = "Отчет #{report_id} успешно показан."
