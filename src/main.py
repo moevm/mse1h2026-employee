@@ -54,7 +54,7 @@ async def main():
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service, role_request_service))
     dp.include_router(setup_common_router(auth_service))
-    dp.include_router(setup_superuser_router(auth_service))
+    dp.include_router(setup_superuser_router(auth_service, role_request_service))
     dp.include_router(setup_lead_router(auth_service))
     dp.include_router(setup_employee_router(auth_service))
     dp.include_router(setup_intern_router(auth_service))

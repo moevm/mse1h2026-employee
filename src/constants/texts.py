@@ -1,7 +1,4 @@
-WELCOME_TEXT = (
-    "Добро пожаловать!\n"
-    "Выберите действие:"
-)
+WELCOME_TEXT = "Добро пожаловать!\nВыберите действие:"
 
 NO_ROLES_TEXT = (
     "Для вашего Telegram ID роли не найдены.\n"
@@ -15,40 +12,19 @@ ROLE_SELECTED_TEXT = "Вы выбрали роль: {role}"
 ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
 LOGOUT_TEXT = "Вы вышли в меню выбора ролей."
 
-SUPERUSER_MENU_TEXT = (
-    "Ваша роль: суперпользователь\n\n"
-    "Выберите действие:"
-)
+SUPERUSER_MENU_TEXT = "Ваша роль: суперпользователь\n\nВыберите действие:"
 
-LEAD_MENU_TEXT = (
-    "Ваша роль: руководитель\n\n"
-    "Выберите раздел:"
-)
+LEAD_MENU_TEXT = "Ваша роль: руководитель\n\nВыберите раздел:"
 
-LEAD_TASKS_TEXT = (
-    "Задачи\n\n"
-    "Выберите действие с задачами."
-)
+LEAD_TASKS_TEXT = "Задачи\n\nВыберите действие с задачами."
 
-LEAD_REPORTS_TEXT = (
-    "Отчеты\n\n"
-    "Выберите действие с отчетами."
-)
+LEAD_REPORTS_TEXT = "Отчеты\n\nВыберите действие с отчетами."
 
-LEAD_WEEKLY_TEXT = (
-    "Недельный отчет\n\n"
-    "Введите сотрудника одним сообщением."
-)
+LEAD_WEEKLY_TEXT = "Недельный отчет\n\nВведите сотрудника одним сообщением."
 
-EMPLOYEE_MENU_TEXT = (
-    "Ваша роль: сотрудник\n\n"
-    "Выберите действие:"
-)
+EMPLOYEE_MENU_TEXT = "Ваша роль: сотрудник\n\nВыберите действие:"
 
-INTERN_MENU_TEXT = (
-    "Ваша роль: стажер\n\n"
-    "Выберите действие:"
-)
+INTERN_MENU_TEXT = "Ваша роль: стажер\n\nВыберите действие:"
 
 ROLE_REQUESTS_NOT_READY_TEXT = "Список запросов ролей пока не реализован."
 CONFIRM_ROLE_NOT_READY_TEXT = "Подтверждение роли пока не реализовано."
@@ -68,7 +44,9 @@ LEAD_REPORTS_LIST_TEXT = "Тут будет список отчетов."
 LEAD_OPEN_REPORT_PROMPT = "Введите report_id одним сообщением."
 LEAD_OPEN_REPORT_SUCCESS = "Отчет #{report_id} успешно показан."
 LEAD_CONFIRM_REPORT_SUCCESS = "Отчет '{report_id}' успешно принят."
-LEAD_DENY_REPORT_PROMPT = "Отчет #{report_id} отклонен. Оставьте комментарий одним сообщением."
+LEAD_DENY_REPORT_PROMPT = (
+    "Отчет #{report_id} отклонен. Оставьте комментарий одним сообщением."
+)
 LEAD_DENY_REPORT_SUCCESS = "Комментарий для '{report_id}' отправлен: {comment}"
 LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике создан."
 
@@ -81,15 +59,20 @@ ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен
 ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
 
 START_WORK_REMINDER_TEXT = (
-    "🔔 <b>Напоминание</b>\n\n"
-    "Перед началом рабочего дня необходимо отметиться."
+    "🔔 <b>Напоминание</b>\n\nПеред началом рабочего дня необходимо отметиться."
 )
 
 END_WORK_REMINDER_TEXT = (
-    "🔔 <b>Напоминание</b>\n\n"
-    "Рабочий день завершается — не забудьте отметиться."
+    "🔔 <b>Напоминание</b>\n\nРабочий день завершается — не забудьте отметиться."
 )
 
 ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
 
 START_MENU_OPEN_TEXT = "Открываю стартовое меню."
+
+SUPERUSER_ROLE_REQUESTS_LIST_TEXT = "Список запросов на роли:\n{requests}"
+SUPERUSER_ROLE_REQUESTS_EMPTY_TEXT = "Нет активных запросов на роли."
+SUPERUSER_CONFIRM_ROLE_PROMPT = "Введите Telegram ID и роль через пробел."
+SUPERUSER_CONFIRM_ROLE_SUCCESS = "Роль {role} успешно выдана пользователю {tg_id}."
+SUPERUSER_CONFIRM_ROLE_ERROR = "Запрос не найден."
+SUPERUSER_CONFIRM_ROLE_FORMAT_ERROR = "Неверный формат. Ожидается: ID роль"
