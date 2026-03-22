@@ -1,20 +1,22 @@
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants.bot_constants import Buttons
 from constants.texts import (
     COMPLETE_TASK_TEXT,
-    CREATE_MY_TASK_TEXT,
     EMPLOYEE_MENU_TEXT,
     FINISH_WORK_TEXT,
     MY_TASKS_TEXT,
+    OFFER_TASK_TITLE_PROMPT,
     REPORT_COMMENT_TEXT,
     START_WORK_TEXT,
 )
 from filters.active_role import ActiveRoleFilter
-from keyboards.role_menus import get_employee_menu_keyboard
+from keyboards.role_menus import get_employee_menu_keyboard, get_manager_selection_keyboard
 from roles import Role
 from services.auth_service import AuthService
+from states.task_request import TaskRequestStates
 
 
 def setup_employee_router(auth_service: AuthService):
@@ -30,8 +32,13 @@ def setup_employee_router(auth_service: AuthService):
         await message.answer(FINISH_WORK_TEXT, reply_markup=get_employee_menu_keyboard())
 
     @router.message(F.text == Buttons.EMPLOYEE_CREATE_TASK)
-    async def create_my_task(message: Message):
-        await message.answer(CREATE_MY_TASK_TEXT, reply_markup=get_employee_menu_keyboard())
+    async def create_my_task(message: Message, state: FSMContext):
+        await state.clear()
+        await state.set_state(TaskRequestStates.waiting_title)
+        await message.answer(
+            OFFER_TASK_TITLE_PROMPT,
+            reply_markup=get_manager_selection_keyboard([]),
+        )
 
     @router.message(F.text == Buttons.EMPLOYEE_TASKS_LIST)
     async def my_task_list(message: Message):
