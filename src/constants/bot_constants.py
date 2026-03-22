@@ -3,10 +3,10 @@ class Buttons:
     REQUEST_ROLE = "Получение роли"
     BACK = "Назад"
 
-    REQUEST_INTERN = "Стажёр"
-    REQUEST_EMPLOYEE = "Сотрудник"
-    REQUEST_LEAD = "Руководитель"
-    REQUEST_SUPERUSER = "Администратор"
+    REQUEST_INTERN = "<Стажёр>"
+    REQUEST_EMPLOYEE = "<Сотрудник>"   
+    REQUEST_LEAD = "<Руководитель>"
+    REQUEST_SUPERUSER = "<Администратор>"
 
     EXIT = "Выйти"
     CANCEL = "Отмена"
