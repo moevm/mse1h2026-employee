@@ -5,7 +5,6 @@ from aiogram.types import Message
 from constants.bot_constants import Buttons
 from constants.texts import (
     ACTION_CANCELLED_TEXT,
-    EMPLOYEE_MENU_TEXT,
     LEAD_CONFIRM_REPORT_SUCCESS,
     LEAD_CREATE_TASK_PROMPT,
     LEAD_CREATE_TASK_SUCCESS,
@@ -23,7 +22,6 @@ from constants.texts import (
 )
 from filters.active_role import ActiveRoleFilter
 from keyboards.role_menus import (
-    get_employee_menu_keyboard,
     get_lead_cancel_keyboard,
     get_lead_main_keyboard,
     get_lead_report_actions_keyboard,
@@ -37,7 +35,7 @@ from states.lead import LeadStates
 
 def setup_lead_router(auth_service: AuthService):
     router = Router()
-    router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD, Role.SUPERUSER))
+    router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD))
 
     @router.message(F.text == Buttons.LEAD_TASKS)
     async def lead_tasks_menu(message: Message, state: FSMContext):
@@ -54,14 +52,6 @@ def setup_lead_router(auth_service: AuthService):
         await state.set_state(LeadStates.waiting_weekly_user)
         await state.update_data(return_to="main")
         await message.answer(LEAD_WEEKLY_TEXT, reply_markup=get_lead_cancel_keyboard())
-
-    @router.message(F.text == Buttons.LEAD_EMPLOYEE_MENU)
-    async def lead_to_employee_menu(message: Message, state: FSMContext):
-        await state.clear()
-        await message.answer(
-            EMPLOYEE_MENU_TEXT,
-            reply_markup=get_employee_menu_keyboard(),
-        )
 
     @router.message(F.text == Buttons.MAIN_MENU)
     async def lead_back_to_main(message: Message, state: FSMContext):
