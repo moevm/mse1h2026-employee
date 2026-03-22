@@ -18,6 +18,7 @@ class SheetsConfig:
     role_requests_sheet_name: str
     visits_sheet_name: str
     task_requests_sheet_name: str
+    tasks_sheet_name: str
 
 
 @dataclass
@@ -44,6 +45,7 @@ def load_config():
         role_requests_sheet_name=os.getenv("ROLE_REQUESTS_SHEET_NAME", "Запросы ролей"),
         visits_sheet_name=os.getenv("VISITS_SHEET_NAME", "Посещения"),
         task_requests_sheet_name=os.getenv("TASK_REQUESTS_SHEET_NAME", "Запросы задач"),
+        tasks_sheet_name=os.getenv("TASKS_SHEET_NAME", "Задачи"),
     )
     reminders = ReminderConfig(
         timezone=os.getenv("REMINDERS_TIMEZONE", "Europe/Moscow"),
