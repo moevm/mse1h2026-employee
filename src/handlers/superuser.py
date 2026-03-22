@@ -28,6 +28,7 @@ def setup_superuser_router(
 ):
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.SUPERUSER))
+    router.callback_query.filter(ActiveRoleFilter(auth_service, Role.SUPERUSER))
 
     @router.message(F.text == Buttons.SUPERUSER_ROLE_REQUESTS)
     async def role_requests_handler(message: Message, bot: Bot):
@@ -135,13 +136,6 @@ def setup_superuser_router(
         await message.answer(
             BAN_USER_NOT_READY_TEXT,
             reply_markup=get_superuser_menu_keyboard(),
-        )
-
-    @router.message(F.text == Buttons.SUPERUSER_LEAD_MENU)
-    async def open_lead_menu_handler(message: Message):
-        await message.answer(
-            LEAD_MENU_TEXT,
-            reply_markup=get_lead_main_keyboard(),
         )
 
     return router

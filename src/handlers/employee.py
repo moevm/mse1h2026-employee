@@ -5,7 +5,7 @@ from aiogram.types import Message
 from constants.bot_constants import Buttons
 from constants.texts import (
     COMPLETE_TASK_TEXT,
-    EMPLOYEE_MENU_TEXT,
+    CREATE_MY_TASK_TEXT,
     FINISH_WORK_TEXT,
     MY_TASKS_TEXT,
     OFFER_TASK_TITLE_PROMPT,
@@ -21,7 +21,7 @@ from states.task_request import TaskRequestStates
 
 def setup_employee_router(auth_service: AuthService):
     router = Router()
-    router.message.filter(ActiveRoleFilter(auth_service, Role.EMPLOYEE, Role.LEAD, Role.SUPERUSER))
+    router.message.filter(ActiveRoleFilter(auth_service, Role.EMPLOYEE))
 
     @router.message(F.text == Buttons.EMPLOYEE_START_WORK)
     async def start_work(message: Message):
@@ -51,9 +51,5 @@ def setup_employee_router(auth_service: AuthService):
     @router.message(F.text == Buttons.EMPLOYEE_REPORT_COMMENT)
     async def report_comment(message: Message):
         await message.answer(REPORT_COMMENT_TEXT, reply_markup=get_employee_menu_keyboard())
-
-    @router.message(F.text == Buttons.LEAD_EMPLOYEE_MENU)
-    async def employee_menu_from_role(message: Message):
-        await message.answer(EMPLOYEE_MENU_TEXT, reply_markup=get_employee_menu_keyboard())
 
     return router
