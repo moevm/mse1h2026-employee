@@ -28,8 +28,8 @@ class Buttons:
     LEAD_DENY_REPORT = "Отклонить"
     LEAD_BACK_TO_REPORTS = "К отчетам"
 
-    EMPLOYEE_START_WORK = "Начать рабочий день"
-    EMPLOYEE_FINISH_WORK = "Завершить рабочий день"
+    START_WORK = "Начать рабочий день"
+    FINISH_WORK = "Завершить рабочий день"
     EMPLOYEE_CREATE_TASK = "Предложить задачу"
     EMPLOYEE_TASKS_LIST = "Мои задачи"
     EMPLOYEE_COMPLETE_TASK = "Отправить отчет"

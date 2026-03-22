@@ -92,3 +92,13 @@ OFFER_TASK_MANAGER_PROMPT = "Выберите руководителя."
 OFFER_TASK_NO_MANAGERS_TEXT = "Не найдено прикрепленных руководителей."
 OFFER_TASK_INVALID_MANAGER_TEXT = "Используйте кнопки ниже."
 OFFER_TASK_SUCCESS_TEXT = "Задача успешно предложена на согласование руководителю."
+
+VISIT_START_SUCCESS_TEXT = "Начало рабочего дня зафиксировано."
+VISIT_START_ALREADY_OPEN_TEXT = "У вас уже есть незавершённая запись рабочего дня."
+VISIT_FINISH_SUCCESS_TEXT = "Конец рабочего дня зафиксирован."
+VISIT_FINISH_NO_OPEN_TEXT = "Не найдена запись о начале рабочего дня."
+
+EXIT_WITH_OPEN_VISIT_TEXT = (
+    "Нельзя выйти из роли, пока рабочий день не завершён.\n"
+    "Сначала нажмите «Завершить рабочий день»."
+)

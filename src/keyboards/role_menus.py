@@ -21,6 +21,8 @@ def get_role_request_action_keyboard(tg_id: str, role: str):
 
 def get_lead_main_keyboard():
     builder = ReplyKeyboardBuilder()
+    builder.button(text=Buttons.START_WORK)
+    builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.LEAD_TASKS)
     builder.button(text=Buttons.LEAD_REPORTS)
     builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
@@ -69,8 +71,8 @@ def get_lead_cancel_keyboard():
 
 def get_employee_menu_keyboard():
     builder = ReplyKeyboardBuilder()
-    builder.button(text=Buttons.EMPLOYEE_START_WORK)
-    builder.button(text=Buttons.EMPLOYEE_FINISH_WORK)
+    builder.button(text=Buttons.START_WORK)
+    builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.EMPLOYEE_CREATE_TASK)
     builder.button(text=Buttons.EMPLOYEE_TASKS_LIST)
     builder.button(text=Buttons.EMPLOYEE_COMPLETE_TASK)
@@ -82,6 +84,8 @@ def get_employee_menu_keyboard():
 
 def get_intern_menu_keyboard():
     builder = ReplyKeyboardBuilder()
+    builder.button(text=Buttons.START_WORK)
+    builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.INTERN_TASKS_LIST)
     builder.button(text=Buttons.INTERN_COMPLETE_TASK)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
