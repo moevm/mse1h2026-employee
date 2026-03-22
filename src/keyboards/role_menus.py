@@ -90,3 +90,12 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.EXIT)
     builder.adjust(2, 1, 1)
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_manager_selection_keyboard(manager_usernames: list[str]):
+    builder = ReplyKeyboardBuilder()
+    for username in manager_usernames:
+        builder.button(text=username)
+    builder.button(text=Buttons.CANCEL)
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
