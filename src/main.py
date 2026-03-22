@@ -11,11 +11,13 @@ from handlers.intern import setup_intern_router
 from handlers.lead import setup_lead_router
 from handlers.start import setup_start_router
 from handlers.superuser import setup_superuser_router
+from handlers.task_request import setup_task_request_router
 
 from services.auth_service import AuthService
 from services.google_sheets import GoogleSheetsClient
 from services.reminder_service import ReminderService
 from services.role_request_service import RoleRequestService
+from services.task_request_service import TaskRequestService
 
 
 async def main():
@@ -46,6 +48,11 @@ async def main():
         role_requests_sheet_name=config.sheets.role_requests_sheet_name,
     )
 
+    task_request_service = TaskRequestService(
+        sheets_client=sheets_client,
+        task_requests_sheet_name=config.sheets.task_requests_sheet_name,
+    )
+
     reminder_service = ReminderService(
         auth_service=auth_service,
         config=config.reminders,
@@ -53,6 +60,7 @@ async def main():
 
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service, role_request_service))
+    dp.include_router(setup_task_request_router(auth_service, task_request_service))
     dp.include_router(setup_common_router(auth_service))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
     dp.include_router(setup_lead_router(auth_service))
