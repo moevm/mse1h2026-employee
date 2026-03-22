@@ -76,3 +76,10 @@ SUPERUSER_CONFIRM_ROLE_PROMPT = "Введите Telegram ID и роль чере
 SUPERUSER_CONFIRM_ROLE_SUCCESS = "Роль {role} успешно выдана пользователю {tg_id}."
 SUPERUSER_CONFIRM_ROLE_ERROR = "Запрос не найден."
 SUPERUSER_CONFIRM_ROLE_FORMAT_ERROR = "Неверный формат. Ожидается: ID роль"
+
+OFFER_TASK_TITLE_PROMPT = "Введите заголовок задачи одним сообщением."
+OFFER_TASK_DESCRIPTION_PROMPT = "Опишите задачу одним сообщением."
+OFFER_TASK_MANAGER_PROMPT = "Выберите руководителя."
+OFFER_TASK_NO_MANAGERS_TEXT = "Не найдено прикрепленных руководителей."
+OFFER_TASK_INVALID_MANAGER_TEXT = "Используйте кнопки ниже."
+OFFER_TASK_SUCCESS_TEXT = "Задача успешно предложена на согласование руководителю."

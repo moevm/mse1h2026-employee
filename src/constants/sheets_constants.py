@@ -1,5 +1,10 @@
 TG_ID_COLUMN = "Telegram ID"
 ROLE_COLUMN = "Role"
+MANAGER_IDS_COLUMN = "ManagerIDs"
 
-
-
+TITLE_COLUMN = "Title"
+DESCRIPTION_COLUMN = "Description"
+LEAD_ID_COLUMN = "LeadID"
+AUTHOR_ID_COLUMN = "AuthorID"
+STATUS_COLUMN = "Status"
+CREATED_AT_COLUMN = "CreatedAt"

@@ -30,7 +30,7 @@ class Buttons:
 
     EMPLOYEE_START_WORK = "Начать рабочий день"
     EMPLOYEE_FINISH_WORK = "Завершить рабочий день"
-    EMPLOYEE_CREATE_TASK = "Создать задачу"
+    EMPLOYEE_CREATE_TASK = "Предложить задачу"
     EMPLOYEE_TASKS_LIST = "Мои задачи"
     EMPLOYEE_COMPLETE_TASK = "Отправить отчет"
     EMPLOYEE_REPORT_COMMENT = "Комментарий к отчету"
