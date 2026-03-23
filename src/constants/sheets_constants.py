@@ -8,3 +8,6 @@ LEAD_ID_COLUMN = "LeadID"
 AUTHOR_ID_COLUMN = "AuthorID"
 STATUS_COLUMN = "Status"
 CREATED_AT_COLUMN = "CreatedAt"
+
+STARTED_AT_COLUMN = "StartedAt"
+ENDED_AT_COLUMN = "EndedAt"
