@@ -79,10 +79,9 @@ def get_employee_menu_keyboard():
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.EMPLOYEE_CREATE_TASK)
     builder.button(text=Buttons.EMPLOYEE_TASKS_LIST)
-    builder.button(text=Buttons.EMPLOYEE_COMPLETE_TASK)
     builder.button(text=Buttons.EMPLOYEE_REPORT_COMMENT)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 2, 1)
+    builder.adjust(2, 2, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -91,7 +90,6 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.START_WORK)
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.INTERN_TASKS_LIST)
-    builder.button(text=Buttons.INTERN_COMPLETE_TASK)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
     builder.button(text=Buttons.EXIT)
     builder.adjust(2, 1, 1, 1)
@@ -125,13 +123,42 @@ def get_task_action_keyboard(task_id: str, status: str) -> InlineKeyboardMarkup 
             text=Buttons.TASK_ACCEPT,
             callback_data=f"{TASK_CALLBACK_PREFIX}:accept:{task_id}",
         )
-    elif status == "in process":
+        builder.adjust(1)
+        return builder.as_markup()
+
+    if status == "in process":
         builder.button(
             text=Buttons.TASK_FINISH,
             callback_data=f"{TASK_CALLBACK_PREFIX}:finish:{task_id}",
         )
-    else:
-        return None
+        builder.button(
+            text=Buttons.TASK_REPORT,
+            callback_data=f"{TASK_CALLBACK_PREFIX}:report:{task_id}",
+        )
+        builder.adjust(2)
+        return builder.as_markup()
 
-    builder.adjust(1)
-    return builder.as_markup()
+    if status == "on consideration":
+        builder.button(
+            text=Buttons.TASK_REPORT,
+            callback_data=f"{TASK_CALLBACK_PREFIX}:report:{task_id}",
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+    
+    if status == "finished":
+        builder.button(
+            text=Buttons.TASK_REPORT,
+            callback_data=f"{TASK_CALLBACK_PREFIX}:report:{task_id}",
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+    return None
+
+def get_report_cancel_keyboard():
+    builder = ReplyKeyboardBuilder()
+    builder.button(text=Buttons.CANCEL)
+    builder.button(text=Buttons.EXIT)
+    builder.adjust(2)
+    return builder.as_markup(resize_keyboard=True)
