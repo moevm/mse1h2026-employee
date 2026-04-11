@@ -41,6 +41,7 @@ class Buttons:
 
     TASK_ACCEPT = "Принять"
     TASK_FINISH = "Завершить"
+    TASK_REPORT = "Отправить отчет"
 
 
 class Callbacks:
