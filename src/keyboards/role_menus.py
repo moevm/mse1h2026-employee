@@ -1,5 +1,9 @@
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+
 from constants.bot_constants import Buttons
+
+TASK_CALLBACK_PREFIX = "task_action"
 
 
 def get_superuser_menu_keyboard():
@@ -90,7 +94,7 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.INTERN_COMPLETE_TASK)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 1, 1)
+    builder.adjust(2, 1, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -111,3 +115,23 @@ def get_employee_selection_keyboard(employee_names: list[str]):
     builder.button(text=Buttons.EXIT)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_task_action_keyboard(task_id: str, status: str) -> InlineKeyboardMarkup | None:
+    builder = InlineKeyboardBuilder()
+
+    if status == "created":
+        builder.button(
+            text=Buttons.TASK_ACCEPT,
+            callback_data=f"{TASK_CALLBACK_PREFIX}:accept:{task_id}",
+        )
+    elif status == "in process":
+        builder.button(
+            text=Buttons.TASK_FINISH,
+            callback_data=f"{TASK_CALLBACK_PREFIX}:finish:{task_id}",
+        )
+    else:
+        return None
+
+    builder.adjust(1)
+    return builder.as_markup()

@@ -37,15 +37,16 @@ MY_TASKS_TEXT = "Список задач пока реализован как з
 COMPLETE_TASK_TEXT = "Отправка отчета пока реализована как заглушка."
 REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
 
-LEAD_TASKS_LIST_TEXT = "Тут будет список задач."
+LEAD_TASKS_LIST_TEXT = "Ваши созданные задачи:"
+LEAD_TASKS_EMPTY_TEXT = "У вас пока нет созданных задач."
 LEAD_CREATE_TASK_TITLE_PROMPT = "Введите название задачи одним сообщением."
 LEAD_CREATE_TASK_DESCRIPTION_PROMPT = (
     "Введите описание задачи одним сообщением.\n"
     "Если описание не нужно — отправьте '-'"
 )
 LEAD_CREATE_TASK_DEADLINE_PROMPT = "Выберите дедлайн в календаре."
-LEAD_CREATE_TASK_SELECT_EMPLOYEE_PROMPT = "Выберите сотрудника."
-LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = "Нет сотрудников, прикрепленных к вам."
+LEAD_CREATE_TASK_SELECT_EMPLOYEE_PROMPT = "Выберите сотрудника или стажера."
+LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = "Нет сотрудников или стажеров, прикрепленных к вам."
 LEAD_CREATE_TASK_INVALID_EMPLOYEE_TEXT = "Используйте кнопки ниже."
 LEAD_CREATE_TASK_SUCCESS = "Задача создана."
 LEAD_CREATE_TASK_DEADLINE_SELECTED = "Дедлайн выбран: {deadline}"
@@ -58,6 +59,16 @@ LEAD_DENY_REPORT_PROMPT = (
 )
 LEAD_DENY_REPORT_SUCCESS = "Комментарий для '{report_id}' отправлен: {comment}"
 LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике создан."
+
+EMPLOYEE_TASKS_LIST_TEXT = "Ваши назначенные задачи:"
+EMPLOYEE_TASKS_EMPTY_TEXT = "У вас пока нет назначенных задач."
+INTERN_TASKS_LIST_TEXT = "Ваши назначенные задачи:"
+INTERN_TASKS_EMPTY_TEXT = "У вас пока нет назначенных задач."
+TASK_ACCEPT_SUCCESS_TEXT = "Задача принята в работу."
+TASK_FINISH_SUCCESS_TEXT = "Задача завершена."
+TASK_STATUS_ALREADY_CHANGED_TEXT = "Статус задачи уже был изменён."
+TASK_ACTION_NOT_ALLOWED_TEXT = "Это действие недоступно для этой задачи."
+TASK_NOT_FOUND_TEXT = "Задача не найдена."
 
 ACTION_CANCELLED_TEXT = "Действие отменено."
 
