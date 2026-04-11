@@ -1,40 +1,6 @@
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.types import Message, ReplyKeyboardRemove
-
-from constants.bot_constants import Buttons
-from constants.texts import (
-    EMPLOYEE_MENU_TEXT,
-    INTERN_MENU_TEXT,
-    LEAD_MENU_TEXT,
-    LOGOUT_TEXT,
-    SUPERUSER_MENU_TEXT,
-    WELCOME_TEXT,
-)
-from keyboards.auth_menu import get_start_menu_keyboard
-from keyboards.role_menus import (
-    get_employee_menu_keyboard,
-    get_intern_menu_keyboard,
-    get_lead_main_keyboard,
-    get_superuser_menu_keyboard,
-)
-from roles import Role
-from services.auth_service import AuthService
-
-
-def get_role_menu(role: Role):
-    if role == Role.SUPERUSER:
-        return SUPERUSER_MENU_TEXT, get_superuser_menu_keyboard()
-    if role == Role.LEAD:
-        return LEAD_MENU_TEXT, get_lead_main_keyboard()
-    if role == Role.EMPLOYEE:
-        return EMPLOYEE_MENU_TEXT, get_employee_menu_keyboard()
-    if role == Role.INTERN:
-        return INTERN_MENU_TEXT, get_intern_menu_keyboard()
-    raise ValueError(f"Неподдерживаемая роль: {role}")
-
-
-from aiogram import F, Router
-from aiogram.types import Message, ReplyKeyboardRemove
+from html import escape
 
 from constants.bot_constants import Buttons
 from constants.texts import (
@@ -57,6 +23,22 @@ from roles import Role
 from services.auth_service import AuthService
 from services.visits_service import VisitsService
 
+async def resolve_user_label(bot: Bot, user_id: int | None) -> str:
+    if user_id is None:
+        return "Не указан"
+
+    try:
+        chat = await bot.get_chat(user_id)
+    except Exception:
+        return f"ID: {user_id}"
+
+    if getattr(chat, "username", None):
+        return f"@{escape(chat.username)}"
+    if getattr(chat, "full_name", None):
+        return escape(chat.full_name)
+    if getattr(chat, "first_name", None):
+        return escape(chat.first_name)
+    return f"ID: {user_id}"
 
 def get_role_menu(role: Role):
     if role == Role.SUPERUSER:
