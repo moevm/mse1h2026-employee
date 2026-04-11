@@ -39,6 +39,9 @@ class Buttons:
     INTERN_COMPLETE_TASK = "Отправить отчет"
     INTERN_REPORT_COMMENT = "Комментарий к отчету"
 
+    TASK_ACCEPT = "Принять"
+    TASK_FINISH = "Завершить"
+
 
 class Callbacks:
     START_AUTH = "start_auth"

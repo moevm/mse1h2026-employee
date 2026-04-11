@@ -84,21 +84,25 @@ class AuthService:
 
         return list(dict.fromkeys(manager_ids))
     
-    def get_employees_for_manager(self, manager_id: int) -> list[int]:
+    def get_team_members_for_manager(
+        self,
+        manager_id: int,
+        allowed_roles: tuple[Role, ...] = (Role.EMPLOYEE, Role.INTERN),
+    ) -> list[int]:
         records = self.sheets_client.get_all_records(self.roles_sheet_name)
 
-        employee_ids: list[int] = []
+        member_ids: list[int] = []
 
         for row in records:
             row_role = Role.from_str(str(row.get(ROLE_COLUMN, "")).strip())
-            if row_role != Role.EMPLOYEE:
+            if row_role not in allowed_roles:
                 continue
 
             row_tg_id = str(row.get(TG_ID_COLUMN, "")).strip()
             if not row_tg_id:
                 continue
 
-            raw_manager_ids = str(row.get(MANAGER_IDS_COLUMN, "")).strip()  # ManagerIDs
+            raw_manager_ids = str(row.get(MANAGER_IDS_COLUMN, "")).strip()
             if not raw_manager_ids:
                 continue
 
@@ -109,9 +113,12 @@ class AuthService:
                     manager_ids.append(int(digits))
 
             if manager_id in manager_ids:
-                employee_ids.append(int(row_tg_id))
+                member_ids.append(int(row_tg_id))
 
-        return list(dict.fromkeys(employee_ids))
+        return list(dict.fromkeys(member_ids))
+
+    def get_employees_for_manager(self, manager_id: int) -> list[int]:
+        return self.get_team_members_for_manager(manager_id, (Role.EMPLOYEE,))
 
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)

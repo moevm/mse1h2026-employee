@@ -2,6 +2,11 @@ TG_ID_COLUMN = "Telegram ID"
 ROLE_COLUMN = "Role"
 MANAGER_IDS_COLUMN = "ManagerIDs"
 
+TASK_ID_COLUMN = "TaskId"
+EMPLOYEE_ID_COLUMN = "EmployeeID"
+DEADLINE_COLUMN = "Deadline"
+UPDATED_AT_COLUMN = "UpdatedAt"
+
 TITLE_COLUMN = "Title"
 DESCRIPTION_COLUMN = "Description"
 LEAD_ID_COLUMN = "LeadID"
