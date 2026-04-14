@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import date
+from html import escape
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -18,48 +19,75 @@ from constants.texts import (
     LEAD_CREATE_TASK_SELECT_EMPLOYEE_PROMPT,
     LEAD_CREATE_TASK_SUCCESS,
     LEAD_CREATE_TASK_TITLE_PROMPT,
-    LEAD_DENY_REPORT_PROMPT,
-    LEAD_DENY_REPORT_SUCCESS,
     LEAD_MENU_TEXT,
-    LEAD_OPEN_REPORT_PROMPT,
-    LEAD_OPEN_REPORT_SUCCESS,
+    LEAD_REPORT_NOT_FOUND_TEXT,
+    LEAD_REPORTS_EMPTY_TEXT,
     LEAD_REPORTS_LIST_TEXT,
     LEAD_REPORTS_TEXT,
     LEAD_TASKS_EMPTY_TEXT,
     LEAD_TASKS_LIST_TEXT,
     LEAD_TASKS_TEXT,
+    LEAD_VIEW_REPORT_SUCCESS,
     LEAD_WEEKLY_SUCCESS,
     LEAD_WEEKLY_TEXT,
+    TASK_NOT_FOUND_TEXT,
     VISIT_FINISH_NO_OPEN_TEXT,
     VISIT_FINISH_SUCCESS_TEXT,
     VISIT_START_ALREADY_OPEN_TEXT,
     VISIT_START_SUCCESS_TEXT,
 )
 from filters.active_role import ActiveRoleFilter
-from services.tasks_service import format_task_for_lead
 from handlers.common import resolve_user_label
 from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_today
 from keyboards.role_menus import (
+    LEAD_REPORT_CALLBACK_PREFIX,
     get_employee_selection_keyboard,
     get_lead_cancel_keyboard,
     get_lead_main_keyboard,
-    get_lead_report_actions_keyboard,
+    get_lead_report_item_keyboard,
     get_lead_reports_keyboard,
     get_lead_tasks_keyboard,
+    get_lead_accept_comment_choice_keyboard,
 )
 from roles import Role
+from services.accepted_tasks_service import AcceptedTasksService
 from services.auth_service import AuthService
-from services.tasks_service import TasksService
+from services.reports_service import ReportRecord, ReportsService
+from services.tasks_service import TaskRecord, TasksService, format_task_for_lead
 from services.visits_service import VisitsService
 from states.lead import LeadStates
 
 logger = logging.getLogger(__name__)
+
+PLACEHOLDER_EMPLOYEE_FIO = "Иванов Иван Иванович"
+
+
+def format_report_summary_for_lead(task: TaskRecord, employee_fio: str) -> str:
+    safe_title = escape(task.title) if task.title else "—"
+    safe_employee_fio = escape(employee_fio) if employee_fio else "—"
+    return (
+        f"<b>Название задачи:</b> {safe_title}\n"
+        f"<b>ФИО сотрудника:</b> {safe_employee_fio}"
+    )
+
+
+def format_report_details_for_lead(task: TaskRecord, employee_fio: str, report: ReportRecord) -> str:
+    safe_title = escape(task.title) if task.title else "—"
+    safe_employee_fio = escape(employee_fio) if employee_fio else "—"
+    safe_text = escape(report.text) if report.text else "—"
+    return (
+        f"<b>Название задачи:</b> {safe_title}\n"
+        f"<b>ФИО сотрудника:</b> {safe_employee_fio}\n"
+        f"<b>Содержимое отчета:</b>\n{safe_text}"
+    )
 
 
 def setup_lead_router(
     auth_service: AuthService,
     tasks_service: TasksService,
     visits_service: VisitsService,
+    reports_service: ReportsService,
+    accepted_tasks_service: AcceptedTasksService,
 ):
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD))
@@ -315,64 +343,151 @@ def setup_lead_router(
     @router.message(F.text == Buttons.LEAD_REPORTS_LIST)
     async def lead_reports_list(message: Message, state: FSMContext):
         await state.clear()
-        await message.answer(LEAD_REPORTS_LIST_TEXT, reply_markup=get_lead_reports_keyboard())
+        reports = await asyncio.to_thread(reports_service.get_all_reports)
 
-    @router.message(F.text == Buttons.LEAD_OPEN_REPORT)
-    async def lead_report_open_start(message: Message, state: FSMContext):
-        await state.set_state(LeadStates.waiting_report_id)
-        await state.update_data(return_to="reports")
-        await message.answer(LEAD_OPEN_REPORT_PROMPT, reply_markup=get_lead_cancel_keyboard())
+        report_items: list[tuple[TaskRecord, ReportRecord]] = []
+        for report in reports:
+            task = await asyncio.to_thread(tasks_service.get_task_by_id, report.task_id)
+            if task is None:
+                continue
+            if task.author_id != message.from_user.id:
+                continue
+            report_items.append((task, report))
 
-    @router.message(LeadStates.waiting_report_id, F.text)
-    async def lead_report_open_input(message: Message, state: FSMContext):
-        report_id = message.text.strip().strip("'").strip('"')
-        await state.set_state(LeadStates.viewing_report)
-        await state.update_data(current_report_id=report_id)
+        if not report_items:
+            await message.answer(
+                LEAD_REPORTS_EMPTY_TEXT,
+                reply_markup=get_lead_reports_keyboard(),
+            )
+            return
+
         await message.answer(
-            LEAD_OPEN_REPORT_SUCCESS.format(report_id=report_id),
-            reply_markup=get_lead_report_actions_keyboard(),
-        )
-
-    @router.message(LeadStates.viewing_report, F.text == Buttons.LEAD_CONFIRM_REPORT)
-    async def lead_report_confirm(message: Message, state: FSMContext):
-        data = await state.get_data()
-        report_id = data.get("current_report_id", "UNKNOWN")
-        await state.clear()
-        await message.answer(
-            LEAD_CONFIRM_REPORT_SUCCESS.format(report_id=report_id),
+            LEAD_REPORTS_LIST_TEXT,
             reply_markup=get_lead_reports_keyboard(),
         )
 
-    @router.message(LeadStates.viewing_report, F.text == Buttons.LEAD_DENY_REPORT)
-    async def lead_report_deny_start(message: Message, state: FSMContext):
-        data = await state.get_data()
-        report_id = data.get("current_report_id", "UNKNOWN")
-        await state.set_state(LeadStates.waiting_deny_comment)
-        await state.update_data(return_to="reports", current_report_id=report_id)
-        await message.answer(
-            LEAD_DENY_REPORT_PROMPT.format(report_id=report_id),
-            reply_markup=get_lead_cancel_keyboard(),
-        )
+        for task, report in report_items:
+            await message.answer(
+                format_report_summary_for_lead(task, PLACEHOLDER_EMPLOYEE_FIO),
+                reply_markup=get_lead_report_item_keyboard(task.task_id),
+                parse_mode="HTML",
+            )
 
-    @router.message(LeadStates.waiting_deny_comment, F.text)
-    async def lead_report_deny_comment(message: Message, state: FSMContext):
-        data = await state.get_data()
-        report_id = data.get("current_report_id", "UNKNOWN")
-        comment = message.text.strip()
-        await state.clear()
-        await message.answer(
-            LEAD_DENY_REPORT_SUCCESS.format(report_id=report_id, comment=comment),
-            reply_markup=get_lead_reports_keyboard(),
-        )
+    @router.callback_query(F.data.startswith(f"{LEAD_REPORT_CALLBACK_PREFIX}:"))
+    async def lead_report_action(callback: CallbackQuery):
+        _, action, task_id = callback.data.split(":", 2)
 
-    @router.message(LeadStates.viewing_report, F.text == Buttons.LEAD_BACK_TO_REPORTS)
-    async def lead_back_to_reports(message: Message, state: FSMContext):
-        await state.clear()
-        await message.answer(LEAD_REPORTS_TEXT, reply_markup=get_lead_reports_keyboard())
+        task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
+        if task is None:
+            await callback.answer(TASK_NOT_FOUND_TEXT, show_alert=True)
+            return
+
+        if task.author_id != callback.from_user.id:
+            await callback.answer(LEAD_REPORT_NOT_FOUND_TEXT, show_alert=True)
+            return
+
+        report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
+        if report is None:
+            await callback.answer(LEAD_REPORT_NOT_FOUND_TEXT, show_alert=True)
+            return
+
+        if action == "view":
+            await callback.message.answer(
+                LEAD_VIEW_REPORT_SUCCESS.format(task_title=task.title),
+            )
+            await callback.message.answer(
+                escape(report.text) if report.text else "—",
+                parse_mode="HTML",
+            )
+            await callback.answer()
+            return
+
+        if action == "accept":
+            await callback.message.answer(
+                "Нужен комментарий к принятому отчету?",
+                reply_markup=get_lead_accept_comment_choice_keyboard(task_id),
+            )
+            await callback.answer()
+            return
+
+        await callback.answer(LEAD_REPORT_NOT_FOUND_TEXT, show_alert=True)
 
     @router.message(LeadStates.waiting_weekly_user, F.text)
     async def lead_weekly_input(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(LEAD_WEEKLY_SUCCESS, reply_markup=get_lead_main_keyboard())
 
+    @router.callback_query(F.data.startswith("lead_report_comment:no:"))
+    async def lead_report_accept_without_comment(callback: CallbackQuery, state: FSMContext): 
+        task_id = callback.data.split(":")[-1]
+
+        task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
+        if task is None:
+            await callback.message.answer("Задача не найдена.")
+            await callback.answer()
+            return
+
+        report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
+        if report is None:
+            await callback.message.answer("Отчет не найден.")
+            await callback.answer()
+            return
+
+        await asyncio.to_thread(
+            accepted_tasks_service.create_from_report,
+            report,
+            task,
+            "",
+        )
+        await asyncio.to_thread(reports_service.delete_report_by_task_id, task_id)
+        await asyncio.to_thread(tasks_service.delete_task_by_id, task_id)
+
+        await callback.message.answer("Отчет принят.")
+        await callback.answer()
+    
+    @router.callback_query(F.data.startswith("lead_report_comment:yes:"))
+    async def lead_report_accept_with_comment_start(callback: CallbackQuery, state: FSMContext):
+        task_id = callback.data.split(":")[-1]
+
+        await state.set_state(LeadStates.waiting_accept_comment)
+        await state.update_data(task_id=task_id)
+
+        await callback.message.answer("Введите комментарий к отчету одним сообщением.")
+        await callback.answer()
+
+    @router.message(LeadStates.waiting_accept_comment, F.text)
+    async def lead_report_accept_with_comment_finish(message: Message, state: FSMContext):
+        data = await state.get_data()
+        task_id = data.get("task_id")
+        comment = message.text.strip()
+
+        if not comment:
+            await message.answer("Комментарий пустой. Введите комментарий еще раз.")
+            return
+
+        task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
+        if task is None:
+            await state.clear()
+            await message.answer("Задача не найдена.")
+            return
+
+        report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
+        if report is None:
+            await state.clear()
+            await message.answer("Отчет не найден.")
+            return
+
+        await asyncio.to_thread(
+            accepted_tasks_service.create_from_report,
+            report,
+            task,
+            comment,
+        )
+        await asyncio.to_thread(reports_service.delete_report_by_task_id, task_id)
+        await asyncio.to_thread(tasks_service.delete_task_by_id, task_id)
+
+        await state.clear()
+        await message.answer("Отчет принят с комментарием.")
+
     return router
+
