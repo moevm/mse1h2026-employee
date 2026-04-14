@@ -23,8 +23,8 @@ class Buttons:
     LEAD_CREATE_TASK = "Создать задачу"
     LEAD_TASKS_LIST = "Список задач"
     LEAD_REPORTS_LIST = "Список отчетов"
-    LEAD_OPEN_REPORT = "Открыть отчет"
-    LEAD_CONFIRM_REPORT = "Подтвердить"
+    LEAD_VIEW_REPORT = "Посмотреть отчет"
+    LEAD_CONFIRM_REPORT = "Принять"
     LEAD_DENY_REPORT = "Отклонить"
     LEAD_BACK_TO_REPORTS = "К отчетам"
 
