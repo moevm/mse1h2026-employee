@@ -65,7 +65,11 @@ def get_lead_report_item_keyboard(task_id: str) -> InlineKeyboardMarkup:
         text=Buttons.LEAD_CONFIRM_REPORT,
         callback_data=f"{LEAD_REPORT_CALLBACK_PREFIX}:accept:{task_id}",
     )
-    builder.adjust(2)
+    builder.button(
+        text=Buttons.LEAD_REJECT_REPORT,
+        callback_data=f"{LEAD_REPORT_CALLBACK_PREFIX}:reject:{task_id}",
+    )
+    builder.adjust(2, 1)
     return builder.as_markup()
 
 
@@ -121,8 +125,9 @@ def get_employee_selection_keyboard(employee_names: list[str]):
 
 def get_task_action_keyboard(task_id: str, status: str) -> InlineKeyboardMarkup | None:
     builder = InlineKeyboardBuilder()
+    normalized_status = (status or "").strip().lower()
 
-    if status == "created":
+    if normalized_status == "created":
         builder.button(
             text=Buttons.TASK_ACCEPT,
             callback_data=f"{TASK_CALLBACK_PREFIX}:accept:{task_id}",
@@ -130,7 +135,7 @@ def get_task_action_keyboard(task_id: str, status: str) -> InlineKeyboardMarkup 
         builder.adjust(1)
         return builder.as_markup()
 
-    if status == "in process":
+    if normalized_status == "in process":
         builder.button(
             text=Buttons.TASK_FINISH,
             callback_data=f"{TASK_CALLBACK_PREFIX}:finish:{task_id}",
@@ -142,15 +147,7 @@ def get_task_action_keyboard(task_id: str, status: str) -> InlineKeyboardMarkup 
         builder.adjust(2)
         return builder.as_markup()
 
-    if status == "on consideration":
-        builder.button(
-            text=Buttons.TASK_REPORT,
-            callback_data=f"{TASK_CALLBACK_PREFIX}:report:{task_id}",
-        )
-        builder.adjust(1)
-        return builder.as_markup()
-
-    if status == "finished":
+    if normalized_status in ("on consideration", "finished", "cancelled"):
         builder.button(
             text=Buttons.TASK_REPORT,
             callback_data=f"{TASK_CALLBACK_PREFIX}:report:{task_id}",
@@ -167,6 +164,7 @@ def get_report_cancel_keyboard():
     builder.button(text=Buttons.EXIT)
     builder.adjust(2)
     return builder.as_markup(resize_keyboard=True)
+
 
 def get_lead_accept_comment_choice_keyboard(task_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
