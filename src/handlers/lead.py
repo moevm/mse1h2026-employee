@@ -10,7 +10,6 @@ from aiogram.types import CallbackQuery, Message
 from constants.bot_constants import Buttons
 from constants.texts import (
     ACTION_CANCELLED_TEXT,
-    LEAD_CONFIRM_REPORT_SUCCESS,
     LEAD_CREATE_TASK_DEADLINE_PROMPT,
     LEAD_CREATE_TASK_DEADLINE_SELECTED,
     LEAD_CREATE_TASK_DESCRIPTION_PROMPT,
@@ -35,6 +34,9 @@ from constants.texts import (
     VISIT_FINISH_SUCCESS_TEXT,
     VISIT_START_ALREADY_OPEN_TEXT,
     VISIT_START_SUCCESS_TEXT,
+    LEAD_REJECT_REPORT_PROMPT,
+    LEAD_REJECT_REPORT_SUCCESS,
+    LEAD_REJECT_COMMENT_EMPTY,
 )
 from filters.active_role import ActiveRoleFilter
 from handlers.common import resolve_user_label
@@ -42,12 +44,12 @@ from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_t
 from keyboards.role_menus import (
     LEAD_REPORT_CALLBACK_PREFIX,
     get_employee_selection_keyboard,
+    get_lead_accept_comment_choice_keyboard,
     get_lead_cancel_keyboard,
     get_lead_main_keyboard,
     get_lead_report_item_keyboard,
     get_lead_reports_keyboard,
     get_lead_tasks_keyboard,
-    get_lead_accept_comment_choice_keyboard,
 )
 from roles import Role
 from services.accepted_tasks_service import AcceptedTasksService
@@ -59,25 +61,23 @@ from states.lead import LeadStates
 
 logger = logging.getLogger(__name__)
 
-PLACEHOLDER_EMPLOYEE_FIO = "Иванов Иван Иванович"
 
-
-def format_report_summary_for_lead(task: TaskRecord, employee_fio: str) -> str:
+def format_report_summary_for_lead(task: TaskRecord, employee_label: str) -> str:
     safe_title = escape(task.title) if task.title else "—"
-    safe_employee_fio = escape(employee_fio) if employee_fio else "—"
+    safe_employee_label = escape(employee_label) if employee_label else "—"
     return (
         f"<b>Название задачи:</b> {safe_title}\n"
-        f"<b>ФИО сотрудника:</b> {safe_employee_fio}"
+        f"<b>Тег выполнившего сотрудника:</b> {safe_employee_label}"
     )
 
 
-def format_report_details_for_lead(task: TaskRecord, employee_fio: str, report: ReportRecord) -> str:
+def format_report_details_for_lead(task: TaskRecord, employee_label: str, report: ReportRecord) -> str:
     safe_title = escape(task.title) if task.title else "—"
-    safe_employee_fio = escape(employee_fio) if employee_fio else "—"
+    safe_employee_label = escape(employee_label) if employee_label else "—"
     safe_text = escape(report.text) if report.text else "—"
     return (
         f"<b>Название задачи:</b> {safe_title}\n"
-        f"<b>ФИО сотрудника:</b> {safe_employee_fio}\n"
+        f"<b>Тег выполнившего сотрудника:</b> {safe_employee_label}\n"
         f"<b>Содержимое отчета:</b>\n{safe_text}"
     )
 
@@ -352,6 +352,8 @@ def setup_lead_router(
                 continue
             if task.author_id != message.from_user.id:
                 continue
+            if (task.status or "").strip().lower() != "on consideration":
+                continue
             report_items.append((task, report))
 
         if not report_items:
@@ -367,14 +369,15 @@ def setup_lead_router(
         )
 
         for task, report in report_items:
+            employee_label = await resolve_user_label(message.bot, task.employee_id)
             await message.answer(
-                format_report_summary_for_lead(task, PLACEHOLDER_EMPLOYEE_FIO),
+                format_report_summary_for_lead(task, employee_label),
                 reply_markup=get_lead_report_item_keyboard(task.task_id),
                 parse_mode="HTML",
             )
 
     @router.callback_query(F.data.startswith(f"{LEAD_REPORT_CALLBACK_PREFIX}:"))
-    async def lead_report_action(callback: CallbackQuery):
+    async def lead_report_action(callback: CallbackQuery, state: FSMContext):
         _, action, task_id = callback.data.split(":", 2)
 
         task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
@@ -392,17 +395,20 @@ def setup_lead_router(
             return
 
         if action == "view":
+            employee_label = await resolve_user_label(callback.bot, task.employee_id)
             await callback.message.answer(
-                LEAD_VIEW_REPORT_SUCCESS.format(task_title=task.title),
-            )
-            await callback.message.answer(
-                escape(report.text) if report.text else "—",
+                format_report_details_for_lead(task, employee_label, report),
                 parse_mode="HTML",
             )
             await callback.answer()
             return
 
         if action == "accept":
+            await state.update_data(
+                task_id=task_id,
+                accept_message_chat_id=callback.message.chat.id,
+                accept_message_id=callback.message.message_id,
+            )
             await callback.message.answer(
                 "Нужен комментарий к принятому отчету?",
                 reply_markup=get_lead_accept_comment_choice_keyboard(task_id),
@@ -410,15 +416,25 @@ def setup_lead_router(
             await callback.answer()
             return
 
+        if action == "reject":
+            await state.set_state(LeadStates.waiting_reject_comment)
+            await state.update_data(
+                task_id=task_id,
+                return_to="reports",
+                reject_message_chat_id=callback.message.chat.id,
+                reject_message_id=callback.message.message_id,
+            )
+            await callback.message.answer(
+                LEAD_REJECT_REPORT_PROMPT,
+                reply_markup=get_lead_cancel_keyboard(),
+            )
+            await callback.answer()
+            return
+
         await callback.answer(LEAD_REPORT_NOT_FOUND_TEXT, show_alert=True)
 
-    @router.message(LeadStates.waiting_weekly_user, F.text)
-    async def lead_weekly_input(message: Message, state: FSMContext):
-        await state.clear()
-        await message.answer(LEAD_WEEKLY_SUCCESS, reply_markup=get_lead_main_keyboard())
-
     @router.callback_query(F.data.startswith("lead_report_comment:no:"))
-    async def lead_report_accept_without_comment(callback: CallbackQuery, state: FSMContext): 
+    async def lead_report_accept_without_comment(callback: CallbackQuery, state: FSMContext):
         task_id = callback.data.split(":")[-1]
 
         task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
@@ -442,15 +458,44 @@ def setup_lead_router(
         await asyncio.to_thread(reports_service.delete_report_by_task_id, task_id)
         await asyncio.to_thread(tasks_service.delete_task_by_id, task_id)
 
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+
+        data = await state.get_data()
+        accept_message_chat_id = data.get("accept_message_chat_id")
+        accept_message_id = data.get("accept_message_id")
+
+        if accept_message_chat_id and accept_message_id:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=accept_message_chat_id,
+                    message_id=accept_message_id,
+                )
+            except Exception:
+                pass
+
+        await state.clear()
         await callback.message.answer("Отчет принят.")
         await callback.answer()
-    
+
     @router.callback_query(F.data.startswith("lead_report_comment:yes:"))
     async def lead_report_accept_with_comment_start(callback: CallbackQuery, state: FSMContext):
         task_id = callback.data.split(":")[-1]
 
+        data = await state.get_data()
         await state.set_state(LeadStates.waiting_accept_comment)
-        await state.update_data(task_id=task_id)
+        await state.update_data(
+            task_id=task_id,
+            accept_message_chat_id=data.get("accept_message_chat_id"),
+            accept_message_id=data.get("accept_message_id"),
+        )
+
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
 
         await callback.message.answer("Введите комментарий к отчету одним сообщением.")
         await callback.answer()
@@ -460,6 +505,8 @@ def setup_lead_router(
         data = await state.get_data()
         task_id = data.get("task_id")
         comment = message.text.strip()
+        accept_message_chat_id = data.get("accept_message_chat_id")
+        accept_message_id = data.get("accept_message_id")
 
         if not comment:
             await message.answer("Комментарий пустой. Введите комментарий еще раз.")
@@ -486,8 +533,92 @@ def setup_lead_router(
         await asyncio.to_thread(reports_service.delete_report_by_task_id, task_id)
         await asyncio.to_thread(tasks_service.delete_task_by_id, task_id)
 
+        if accept_message_chat_id and accept_message_id:
+            try:
+                await message.bot.delete_message(
+                    chat_id=accept_message_chat_id,
+                    message_id=accept_message_id,
+                )
+            except Exception:
+                pass
+
         await state.clear()
         await message.answer("Отчет принят с комментарием.")
 
-    return router
+    @router.message(LeadStates.waiting_reject_comment, F.text)
+    async def lead_report_reject_finish(message: Message, state: FSMContext):
+        data = await state.get_data()
+        task_id = data.get("task_id")
+        comment = message.text.strip()
+        reject_message_chat_id = data.get("reject_message_chat_id")
+        reject_message_id = data.get("reject_message_id")
 
+        if not comment:
+            await message.answer(
+                LEAD_REJECT_COMMENT_EMPTY,
+                reply_markup=get_lead_cancel_keyboard(),
+            )
+            return
+
+        task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
+        if task is None:
+            await state.clear()
+            await message.answer("Задача не найдена.", reply_markup=get_lead_reports_keyboard())
+            return
+
+        report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
+        if report is None:
+            await state.clear()
+            await message.answer("Отчет не найден.", reply_markup=get_lead_reports_keyboard())
+            return
+
+        await asyncio.to_thread(
+            reports_service.update_manager_feedback,
+            task_id,
+            comment,
+        )
+
+        await asyncio.to_thread(tasks_service.update_task_status, task_id, "cancelled")
+
+        if reject_message_chat_id and reject_message_id:
+            try:
+                await message.bot.delete_message(
+                    chat_id=reject_message_chat_id,
+                    message_id=reject_message_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Не удалось удалить сообщение с отклоненным отчетом %s/%s: %s",
+                    reject_message_chat_id,
+                    reject_message_id,
+                    exc,
+                )
+
+        try:
+            await message.bot.send_message(
+                task.employee_id,
+                (
+                    f"Отчет по задаче «{task.title}» отправлен на доработку.\n\n"
+                    f"Комментарий руководителя:\n{comment}\n\n"
+                    f"Задача снова доступна в списке задач."
+                ),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Не удалось отправить уведомление сотруднику %s: %s",
+                task.employee_id,
+                exc,
+            )
+
+        await state.clear()
+        await message.answer(
+            LEAD_REJECT_REPORT_SUCCESS,
+            reply_markup=get_lead_reports_keyboard(),
+        )
+
+    @router.message(LeadStates.waiting_weekly_user, F.text)
+    async def lead_weekly_input(message: Message, state: FSMContext):
+        await state.clear()
+        await message.answer(LEAD_WEEKLY_SUCCESS, reply_markup=get_lead_main_keyboard())
+
+    return router
