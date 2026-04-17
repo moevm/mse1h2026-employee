@@ -1,4 +1,5 @@
 import asyncio
+from html import escape
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
@@ -84,7 +85,10 @@ def setup_intern_router(
     @router.message(F.text == Buttons.INTERN_TASKS_LIST)
     async def my_task_list(message: Message):
         tasks = await asyncio.to_thread(tasks_service.list_tasks_assigned_to, message.from_user.id)
-        tasks = [t for t in tasks if (t.status or "").strip() in ("created", "in process", "finished")]
+        tasks = [
+            t for t in tasks
+            if (t.status or "").strip().lower() in ("created", "in process", "finished", "cancelled")
+        ]
 
         if not tasks:
             await message.answer(
@@ -100,8 +104,18 @@ def setup_intern_router(
 
         for task in tasks:
             author_label = await resolve_user_label(message.bot, task.author_id)
+            task_text = format_task_for_assignee(task, author_label)
+
+            if (task.status or "").strip().lower() == "cancelled":
+                manager_feedback = await asyncio.to_thread(
+                    reports_service.get_manager_feedback_by_task_id,
+                    task.task_id,
+                )
+                if manager_feedback:
+                    task_text += f"\n\n<b>Комментарий руководителя:</b>\n{escape(manager_feedback)}"
+
             await message.answer(
-                format_task_for_assignee(task, author_label),
+                task_text,
                 reply_markup=get_task_action_keyboard(task.task_id, task.status),
                 parse_mode="HTML",
             )
@@ -132,7 +146,7 @@ def setup_intern_router(
             updated_task = await asyncio.to_thread(tasks_service.update_task_status, task_id, "finished")
             success_text = TASK_FINISH_SUCCESS_TEXT
         elif action == "report":
-            if task.status not in ("in process", "on consideration", "finished"):
+            if (task.status or "").strip().lower() not in ("in process", "on consideration", "finished", "cancelled"):
                 await callback.answer(TASK_ACTION_NOT_ALLOWED_TEXT, show_alert=True)
                 return
 
