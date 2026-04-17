@@ -27,7 +27,7 @@ class ReportsService:
 
     @staticmethod
     def _normalize_header(value: str) -> str:
-        return re.sub(r"[^a-z0-9]", "", str(value).strip().lower())
+        return re.sub(r"[^a-z0-9а-яё]", "", str(value).strip().lower())
 
     @staticmethod
     def _parse_int(value: str) -> int | None:
@@ -70,20 +70,6 @@ class ReportsService:
             return None
 
         text = value_at(text_index)
-        if not text:
-            parts: list[str] = []
-            for header, label in (
-                ("TasksDone", "Выполнено"),
-                ("Description", "Описание"),
-                ("Problems", "Проблемы"),
-                ("Status", "Статус"),
-                ("ManagerFeedback", "Комментарий руководителя"),
-            ):
-                idx = self.find_column(headers, header)
-                value = value_at(idx)
-                if value:
-                    parts.append(f"{label}: {value}")
-            text = "\n".join(parts)
 
         raw_fields: dict[str, str] = {}
         for index, header in enumerate(headers):
@@ -111,16 +97,6 @@ class ReportsService:
                 reports.append(report)
         return reports
 
-    def create_report(self, task_id: str, employee_id: int, text: str) -> str:
-        report_id = uuid.uuid4().hex
-        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        self.sheets_client.append_row(
-            self.reports_sheet_name,
-            [report_id, task_id, employee_id, text, created_at],
-        )
-        return report_id
-
     def get_report_by_id(self, report_id: str) -> ReportRecord | None:
         normalized_report_id = str(report_id).strip()
         for report in self.get_all_reports():
@@ -134,6 +110,116 @@ class ReportsService:
             if report.task_id == normalized_task_id:
                 return report
         return None
+
+    def create_report(self, task_id: str, employee_id: int, text: str) -> str:
+        existing_report = self.get_report_by_task_id(task_id)
+        created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if existing_report is not None:
+            self.update_report_by_task_id(task_id, employee_id, text, created_at)
+            return existing_report.report_id
+
+        report_id = uuid.uuid4().hex
+        self.sheets_client.append_row(
+            self.reports_sheet_name,
+            [report_id, task_id, employee_id, text, created_at, ""],
+        )
+        return report_id
+
+    def update_report_by_task_id(self, task_id: str, employee_id: int, text: str, created_at: str | None = None) -> bool:
+        headers, rows = self.read_rows()
+        if not headers:
+            return False
+
+        report_id_index = self.find_column(headers, "ReportID", "ReportId", "report_id")
+        task_id_index = self.find_column(headers, TASK_ID_COLUMN, "task_id")
+        employee_id_index = self.find_column(headers, EMPLOYEE_ID_COLUMN, "TelegramID", "employee_id")
+        text_index = self.find_column(headers, "Text", "ReportText", "text")
+        created_at_index = self.find_column(headers, CREATED_AT_COLUMN, "Date", "created_at")
+        feedback_index = self.find_column(headers, "ManagerFeedback", "manager_feedback", "Комментарий руководителя")
+
+        if task_id_index is None or text_index is None:
+            return False
+
+        normalized_task_id = str(task_id).strip()
+        created_at_value = created_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for row_index, row in enumerate(rows, start=2):
+            current_task_id = str(row[task_id_index]).strip() if task_id_index < len(row) else ""
+            if current_task_id == normalized_task_id:
+                if employee_id_index is not None:
+                    self.sheets_client.update_cell(
+                        self.reports_sheet_name,
+                        row_index,
+                        employee_id_index + 1,
+                        str(employee_id),
+                    )
+                if text_index is not None:
+                    self.sheets_client.update_cell(
+                        self.reports_sheet_name,
+                        row_index,
+                        text_index + 1,
+                        text,
+                    )
+                if created_at_index is not None:
+                    self.sheets_client.update_cell(
+                        self.reports_sheet_name,
+                        row_index,
+                        created_at_index + 1,
+                        created_at_value,
+                    )
+                if feedback_index is not None:
+                    self.sheets_client.update_cell(
+                        self.reports_sheet_name,
+                        row_index,
+                        feedback_index + 1,
+                        "",
+                    )
+                return True
+
+        return False
+
+    def update_manager_feedback(self, task_id: str, feedback: str) -> bool:
+        headers, rows = self.read_rows()
+        if not headers:
+            return False
+
+        feedback_index = self.find_column(
+            headers,
+            "ManagerFeedback",
+        )
+        task_id_index = self.find_column(headers, TASK_ID_COLUMN, "task_id")
+
+        if feedback_index is None or task_id_index is None:
+            return False
+
+        normalized_task_id = str(task_id).strip()
+
+        for row_index, row in enumerate(rows, start=2):
+            current_task_id = str(row[task_id_index]).strip() if task_id_index < len(row) else ""
+            if current_task_id == normalized_task_id:
+                self.sheets_client.update_cell(
+                    self.reports_sheet_name,
+                    row_index,
+                    feedback_index + 1,
+                    feedback,
+                )
+                return True
+
+        return False
+
+    def get_manager_feedback_by_task_id(self, task_id: str) -> str:
+        report = self.get_report_by_task_id(task_id)
+        if report is None:
+            return ""
+
+        for key, value in report.raw_fields.items():
+            if self._normalize_header(key) in {
+                self._normalize_header("ManagerFeedback"),
+            }:
+                return str(value).strip()
+
+        return ""
 
     def delete_report_by_task_id(self, task_id: str) -> bool:
         report = self.get_report_by_task_id(task_id)

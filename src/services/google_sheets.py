@@ -46,3 +46,7 @@ class GoogleSheetsClient:
     def delete_row(self, sheet_name: str, row_index: int):
         worksheet = self.get_worksheet(sheet_name)
         worksheet.delete_rows(row_index)
+
+    def update_cell(self, sheet_name: str, row: int, col: int, value: str) -> None:
+        worksheet = self.spreadsheet.worksheet(sheet_name)
+        worksheet.update_cell(row, col, value)
