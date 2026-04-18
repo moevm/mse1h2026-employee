@@ -50,15 +50,15 @@ LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = "Нет сотрудников или ст�
 LEAD_CREATE_TASK_INVALID_EMPLOYEE_TEXT = "Используйте кнопки ниже."
 LEAD_CREATE_TASK_SUCCESS = "Задача создана."
 LEAD_CREATE_TASK_DEADLINE_SELECTED = "Дедлайн выбран: {deadline}"
-LEAD_REPORTS_LIST_TEXT = "Тут будет список отчетов."
-LEAD_OPEN_REPORT_PROMPT = "Введите report_id одним сообщением."
-LEAD_OPEN_REPORT_SUCCESS = "Отчет #{report_id} успешно показан."
-LEAD_CONFIRM_REPORT_SUCCESS = "Отчет '{report_id}' успешно принят."
-LEAD_DENY_REPORT_PROMPT = (
-    "Отчет #{report_id} отклонен. Оставьте комментарий одним сообщением."
-)
-LEAD_DENY_REPORT_SUCCESS = "Комментарий для '{report_id}' отправлен: {comment}"
+LEAD_REPORTS_LIST_TEXT = "Список отчетов по вашим задачам:"
+LEAD_REPORTS_EMPTY_TEXT = "По вашим задачам пока нет отчетов."
+LEAD_VIEW_REPORT_SUCCESS = "Отчет по задаче '{task_title}'"
+LEAD_CONFIRM_REPORT_SUCCESS = "Отчет по задаче '{task_title}' успешно принят."
+LEAD_REPORT_NOT_FOUND_TEXT = "Отчет не найден."
 LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике создан."
+LEAD_REJECT_REPORT_PROMPT = "Введите комментарий к отклоненному отчету одним сообщением."
+LEAD_REJECT_REPORT_SUCCESS = "Отчет успешно отправлен на доработку."
+LEAD_REJECT_COMMENT_EMPTY = "Комментарий пустой. Введите комментарий еще раз."
 
 EMPLOYEE_TASKS_LIST_TEXT = "Ваши назначенные задачи:"
 EMPLOYEE_TASKS_EMPTY_TEXT = "У вас пока нет назначенных задач."

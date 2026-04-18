@@ -174,6 +174,14 @@ class TasksService:
                 return task
         return None
 
+    def delete_task_by_id(self, task_id: str) -> bool:
+        task = self.get_task_by_id(task_id)
+        if task is None:
+            return False
+
+        self.sheets_client.delete_row(self.tasks_sheet_name, task.row_index)
+        return True
+
     def update_task_status(self, task_id: str, new_status: str) -> TaskRecord | None:
         headers, rows = self.read_rows()
         if not headers:

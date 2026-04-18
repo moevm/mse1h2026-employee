@@ -23,9 +23,9 @@ class Buttons:
     LEAD_CREATE_TASK = "Создать задачу"
     LEAD_TASKS_LIST = "Список задач"
     LEAD_REPORTS_LIST = "Список отчетов"
-    LEAD_OPEN_REPORT = "Открыть отчет"
-    LEAD_CONFIRM_REPORT = "Подтвердить"
-    LEAD_DENY_REPORT = "Отклонить"
+    LEAD_VIEW_REPORT = "Посмотреть отчет"
+    LEAD_CONFIRM_REPORT = "Принять"
+    LEAD_REJECT_REPORT = "Отклонить отчет"
     LEAD_BACK_TO_REPORTS = "К отчетам"
 
     START_WORK = "Начать рабочий день"
@@ -42,6 +42,7 @@ class Buttons:
     TASK_ACCEPT = "Принять"
     TASK_FINISH = "Завершить"
     TASK_REPORT = "Отправить отчет"
+    
 
 
 class Callbacks:
@@ -50,3 +51,4 @@ class Callbacks:
     REQUEST_ROLE_SELECT = "request_role_select"
     BACK = "back_to_start"
     AUTH_ROLE = "auth_role"
+

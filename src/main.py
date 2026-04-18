@@ -21,6 +21,7 @@ from services.task_request_service import TaskRequestService
 from services.tasks_service import TasksService
 from services.visits_service import VisitsService
 from services.reports_service import ReportsService
+from services.accepted_tasks_service import AcceptedTasksService
 
 
 async def main():
@@ -77,12 +78,17 @@ async def main():
         reports_sheet_name=config.sheets.reports_sheet_name,
     )
 
+    accepted_tasks_service = AcceptedTasksService(
+        sheets_client=sheets_client,
+        accepted_tasks_sheet_name=config.sheets.accepted_tasks_sheet_name,
+    )
+
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service, role_request_service))
     dp.include_router(setup_task_request_router(auth_service, task_request_service))
     dp.include_router(setup_common_router(auth_service, visits_service))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
-    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service))
+    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service))
     dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service))
     dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service))
 
