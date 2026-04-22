@@ -4,9 +4,10 @@ from aiogram import F, Router
 from aiogram.types import Message
 
 from keyboards.auth_menu import (
+    get_role_request_button_text,
+    get_role_request_keyboard,
     get_roles_keyboard,
     get_start_menu_keyboard,
-    get_role_request_keyboard,
 )
 from roles import Role
 from services.auth_service import AuthService
@@ -15,6 +16,7 @@ from services.role_request_service import RoleRequestService
 from constants.texts import (
     CHOOSE_ROLE_TEXT,
     NO_ACCESS_ROLE_TEXT,
+    NO_AVAILABLE_ROLES_TEXT,
     ROLE_REQUEST_CHOOSE_TEXT,
     ROLE_REQUEST_SENT_TEXT,
     NO_ROLES_TEXT,
@@ -80,21 +82,30 @@ def setup_auth_router(
 
     @router.message(F.text == Buttons.REQUEST_ROLE)
     async def request_role_handler(message: Message):
+        tg_id = message.from_user.id
+        user_roles = set(auth_service.get_user_roles(tg_id))
+        available_roles = [role for role in Role if role not in user_roles]
+
+        if not available_roles:
+            await message.answer(
+                NO_AVAILABLE_ROLES_TEXT,
+                reply_markup=get_start_menu_keyboard(),
+            )
+            return
+
         await message.answer(
             ROLE_REQUEST_CHOOSE_TEXT,
-            reply_markup=get_role_request_keyboard(),
+            reply_markup=get_role_request_keyboard(available_roles),
         )
 
-    @router.message(F.text.in_([Buttons.REQUEST_INTERN, Buttons.REQUEST_EMPLOYEE, Buttons.REQUEST_LEAD, Buttons.REQUEST_SUPERUSER,]))
+    @router.message(F.text.in_([get_role_request_button_text(role) for role in Role]))
     async def request_role_select_handler(message: Message):
         tg_id = message.from_user.id
 
-        role = {
-            Buttons.REQUEST_INTERN: Role.INTERN,
-            Buttons.REQUEST_EMPLOYEE: Role.EMPLOYEE,
-            Buttons.REQUEST_LEAD: Role.LEAD,
-            Buttons.REQUEST_SUPERUSER: Role.SUPERUSER,
-        }.get(message.text)
+        role = next(
+            (role for role in Role if get_role_request_button_text(role) == message.text),
+            None,
+        )
 
         if role is None:
             await message.answer(UNKNOWN_ROLE_TEXT)
@@ -103,7 +114,7 @@ def setup_auth_router(
         if auth_service.can_login_as_role(tg_id, role):
             await message.answer("У вас уже есть эта роль")
             return
-        
+
         await asyncio.to_thread(role_request_service.create_request, tg_id, role)
 
         await message.answer(
