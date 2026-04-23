@@ -74,6 +74,8 @@ ACTION_CANCELLED_TEXT = "Действие отменено."
 
 ROLE_REQUEST_CHOOSE_TEXT = "Выберите роль, которую хотите получить:"
 
+NO_AVAILABLE_ROLES_TEXT = "У вас уже есть все доступные роли."
+
 ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
 
 ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
@@ -99,10 +101,9 @@ SUPERUSER_CONFIRM_ROLE_FORMAT_ERROR = "Неверный формат. Ожида
 
 OFFER_TASK_TITLE_PROMPT = "Введите заголовок задачи одним сообщением."
 OFFER_TASK_DESCRIPTION_PROMPT = "Опишите задачу одним сообщением."
-OFFER_TASK_MANAGER_PROMPT = "Выберите руководителя."
 OFFER_TASK_NO_MANAGERS_TEXT = "Не найдено прикрепленных руководителей."
 OFFER_TASK_INVALID_MANAGER_TEXT = "Используйте кнопки ниже."
-OFFER_TASK_SUCCESS_TEXT = "Задача успешно предложена на согласование руководителю."
+OFFER_TASK_SUCCESS_TEXT = "Задача отправлена вашим руководителям для подтверждения."
 
 VISIT_START_SUCCESS_TEXT = "Начало рабочего дня зафиксировано."
 VISIT_START_ALREADY_OPEN_TEXT = "У вас уже есть незавершённая запись рабочего дня."

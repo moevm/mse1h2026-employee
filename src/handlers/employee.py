@@ -31,8 +31,8 @@ from services.tasks_service import format_task_for_assignee
 from handlers.common import resolve_user_label
 from keyboards.role_menus import (
     TASK_CALLBACK_PREFIX,
+    get_cancel_keyboard,
     get_employee_menu_keyboard,
-    get_manager_selection_keyboard,
     get_task_action_keyboard,
     get_report_cancel_keyboard,
 )
@@ -91,7 +91,7 @@ def setup_employee_router(
         await state.set_state(TaskRequestStates.waiting_title)
         await message.answer(
             OFFER_TASK_TITLE_PROMPT,
-            reply_markup=get_manager_selection_keyboard([]),
+            reply_markup=get_cancel_keyboard(),
         )
 
     @router.message(F.text == Buttons.EMPLOYEE_TASKS_LIST)
