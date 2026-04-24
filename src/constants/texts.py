@@ -37,6 +37,13 @@ MY_TASKS_TEXT = "Список задач пока реализован как з
 COMPLETE_TASK_TEXT = "Отправка отчета пока реализована как заглушка."
 REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
 
+LEAD_TASK_PROPOSALS_LIST_TEXT = "Предложенные задачи:"
+LEAD_TASK_PROPOSALS_EMPTY_TEXT = "Нет предложенных задач."
+LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT = "Предложение не найдено или уже обработано."
+LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT = "Выберите дедлайн для принятой задачи."
+LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS = "Задача принята и создана."
+LEAD_TASK_PROPOSAL_REJECT_SUCCESS = "Предложение отклонено."
+
 LEAD_TASKS_LIST_TEXT = "Ваши созданные задачи:"
 LEAD_TASKS_EMPTY_TEXT = "У вас пока нет созданных задач."
 LEAD_CREATE_TASK_TITLE_PROMPT = "Введите название задачи одним сообщением."

@@ -21,6 +21,7 @@ class Buttons:
     LEAD_WEEKLY_REPORT = "Недельный отчет"
     LEAD_EMPLOYEE_MENU = "Меню сотрудника"
     LEAD_CREATE_TASK = "Создать задачу"
+    LEAD_TASK_PROPOSALS = "Предложения"
     LEAD_TASKS_LIST = "Список задач"
     LEAD_REPORTS_LIST = "Список отчетов"
     LEAD_VIEW_REPORT = "Посмотреть отчет"
