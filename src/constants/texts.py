@@ -125,3 +125,9 @@ EXIT_WITH_OPEN_VISIT_TEXT = (
 REPORT_TEXT_PROMPT = "Введите текст отчета одним сообщением."
 REPORT_EMPTY_TEXT = "Текст отчета не должен быть пустым."
 REPORT_SENT_TEXT = "Отчет отправлен. Статус задачи изменен на \"На рассмотрении\"."
+
+SUPERUSER_REVOKE_ROLE_LIST_TEXT = "Список пользователей с ролями:"
+SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с назначенными ролями."
+SUPERUSER_REVOKE_ROLE_SUCCESS = "Роль {role} отозвана."
+SUPERUSER_REVOKE_ROLE_NOT_FOUND = "У пользователя уже нет этой роли."
+SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER = "Нельзя отозвать роль у последнего администратора."
