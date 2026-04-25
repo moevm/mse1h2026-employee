@@ -6,12 +6,13 @@ from constants.bot_constants import Buttons
 TASK_CALLBACK_PREFIX = "task_action"
 LEAD_REPORT_CALLBACK_PREFIX = "lead_report"
 TASK_PROPOSAL_CALLBACK_PREFIX = "task_proposal"
-
+SUPERUSER_REVOKE_CALLBACK_PREFIX = "superuser_revoke"
 
 def get_superuser_menu_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.SUPERUSER_ROLE_REQUESTS)
     builder.button(text=Buttons.SUPERUSER_BAN_USER)
+    builder.button(text=Buttons.SUPERUSER_REVOKE_ROLE)
     builder.button(text=Buttons.EXIT)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
@@ -204,3 +205,19 @@ def get_lead_accept_comment_choice_keyboard(task_id: str) -> InlineKeyboardMarku
             ]
         ]
     )
+
+def get_superuser_revoke_role_keyboard(tg_id: int, roles: list[str]):
+    builder = InlineKeyboardBuilder()
+    role_titles = {
+        "lead": "руководитель",
+        "employee": "сотрудник",
+        "intern": "стажер",
+        "superuser": "суперпользователь",
+    }
+    for role in roles:
+        builder.button(
+            text=f"Отозвать роль: {role_titles.get(role, role)}",
+            callback_data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:{tg_id}:{role}",
+        )
+    builder.adjust(1)
+    return builder.as_markup()

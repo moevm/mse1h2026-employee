@@ -15,6 +15,7 @@ class Buttons:
     SUPERUSER_ROLE_REQUESTS = "Список запросов ролей"
     SUPERUSER_BAN_USER = "Заблокировать пользователя"
     SUPERUSER_LEAD_MENU = "Меню руководителя"
+    SUPERUSER_REVOKE_ROLE = "Отозвать роль"
 
     LEAD_TASKS = "Задачи"
     LEAD_REPORTS = "Отчеты"

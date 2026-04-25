@@ -119,7 +119,54 @@ class AuthService:
 
     def get_employees_for_manager(self, manager_id: int) -> list[int]:
         return self.get_team_members_for_manager(manager_id, (Role.EMPLOYEE,))
+    
+    def get_all_users(self) -> list[AuthUser]:
+        return [
+            AuthUser(tg_id=tg_id, roles=self.get_user_roles(tg_id))
+            for tg_id in self.get_user_ids()
+            if self.get_user_roles(tg_id)
+        ]
 
+    def revoke_role(self, tg_id: int, role: Role) -> bool:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        if not values:
+            return False
+
+        headers = values[0]
+        tg_index = next(
+            (index for index, header in enumerate(headers) if str(header).strip() == TG_ID_COLUMN),
+            None,
+        )
+        role_index = next(
+            (index for index, header in enumerate(headers) if str(header).strip() == ROLE_COLUMN),
+            None,
+        )
+
+        if tg_index is None or role_index is None:
+            return False
+
+        matching_rows: list[int] = []
+        normalized_tg_id = str(tg_id).strip()
+        normalized_role = role.value.strip().lower()
+
+        for row_index, row in enumerate(values[1:], start=2):
+            row_tg_id = str(row[tg_index]).strip() if tg_index < len(row) else ""
+            row_role = str(row[role_index]).strip().lower() if role_index < len(row) else ""
+
+            if row_tg_id == normalized_tg_id and row_role == normalized_role:
+                matching_rows.append(row_index)
+
+        if not matching_rows:
+            return False
+
+        for row_index in reversed(matching_rows):
+            self.sheets_client.delete_row(self.roles_sheet_name, row_index)
+
+        if self.get_active_role(tg_id) == role:
+            self.logout(tg_id)
+
+        return True
+    
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)
 
