@@ -24,6 +24,12 @@ from constants.texts import (
     LEAD_REPORTS_LIST_TEXT,
     LEAD_REPORTS_TEXT,
     LEAD_TASKS_EMPTY_TEXT,
+    LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT,
+    LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS,
+    LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT,
+    LEAD_TASK_PROPOSAL_REJECT_SUCCESS,
+    LEAD_TASK_PROPOSALS_EMPTY_TEXT,
+    LEAD_TASK_PROPOSALS_LIST_TEXT,
     LEAD_TASKS_LIST_TEXT,
     LEAD_TASKS_TEXT,
     LEAD_VIEW_REPORT_SUCCESS,
@@ -43,6 +49,7 @@ from handlers.common import resolve_user_label
 from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_today
 from keyboards.role_menus import (
     LEAD_REPORT_CALLBACK_PREFIX,
+    TASK_PROPOSAL_CALLBACK_PREFIX,
     get_employee_selection_keyboard,
     get_lead_accept_comment_choice_keyboard,
     get_lead_cancel_keyboard,
@@ -50,11 +57,13 @@ from keyboards.role_menus import (
     get_lead_report_item_keyboard,
     get_lead_reports_keyboard,
     get_lead_tasks_keyboard,
+    get_task_proposal_action_keyboard,
 )
 from roles import Role
 from services.accepted_tasks_service import AcceptedTasksService
 from services.auth_service import AuthService
 from services.reports_service import ReportRecord, ReportsService
+from services.task_request_service import TaskRequestRecord, TaskRequestService
 from services.tasks_service import TaskRecord, TasksService, format_task_for_lead
 from services.visits_service import VisitsService
 from states.lead import LeadStates
@@ -82,12 +91,27 @@ def format_report_details_for_lead(task: TaskRecord, employee_label: str, report
     )
 
 
+def format_task_proposal_for_lead(request: TaskRequestRecord, employee_label: str) -> str:
+    safe_title = escape(request.title) if request.title else "—"
+    safe_description = escape(request.description) if request.description else "—"
+    safe_employee_label = escape(employee_label) if employee_label else "—"
+    safe_created_at = escape(request.created_at) if request.created_at else "—"
+
+    return (
+        f"<b>Название:</b> {safe_title}\n"
+        f"<b>Описание:</b> {safe_description}\n"
+        f"<b>Предложил:</b> {safe_employee_label}\n"
+        f"<b>Создано:</b> {safe_created_at}"
+    )
+
+
 def setup_lead_router(
     auth_service: AuthService,
     tasks_service: TasksService,
     visits_service: VisitsService,
     reports_service: ReportsService,
     accepted_tasks_service: AcceptedTasksService,
+    task_request_service: TaskRequestService,
 ):
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD))
@@ -184,6 +208,171 @@ def setup_lead_router(
                 format_task_for_lead(task, assignee_label),
                 parse_mode="HTML",
             )
+
+
+    @router.message(F.text == Buttons.LEAD_TASK_PROPOSALS)
+    async def lead_task_proposals_list(message: Message, state: FSMContext):
+        await state.clear()
+        requests = await asyncio.to_thread(
+            task_request_service.list_requests_for_lead,
+            message.from_user.id,
+        )
+
+        if not requests:
+            await message.answer(
+                LEAD_TASK_PROPOSALS_EMPTY_TEXT,
+                reply_markup=get_lead_tasks_keyboard(),
+            )
+            return
+
+        await message.answer(
+            LEAD_TASK_PROPOSALS_LIST_TEXT,
+            reply_markup=get_lead_tasks_keyboard(),
+        )
+
+        for request in requests:
+            employee_label = await resolve_user_label(message.bot, request.author_id)
+            await message.answer(
+                format_task_proposal_for_lead(request, employee_label),
+                reply_markup=get_task_proposal_action_keyboard(request.callback_token),
+                parse_mode="HTML",
+            )
+
+    @router.callback_query(F.data.startswith(f"{TASK_PROPOSAL_CALLBACK_PREFIX}:"))
+    async def lead_task_proposal_action(callback: CallbackQuery, state: FSMContext):
+        _, action, token = callback.data.split(":", 2)
+
+        request = await asyncio.to_thread(
+            task_request_service.get_request_for_lead_by_token,
+            token,
+            callback.from_user.id,
+        )
+        if request is None:
+            await callback.answer(LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT, show_alert=True)
+            return
+
+        if action == "reject":
+            await asyncio.to_thread(task_request_service.delete_request, request)
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer(
+                LEAD_TASK_PROPOSAL_REJECT_SUCCESS,
+                reply_markup=get_lead_tasks_keyboard(),
+            )
+            await callback.answer()
+            return
+
+        if action == "accept":
+            await state.set_state(LeadStates.waiting_task_proposal_deadline)
+            await state.update_data(
+                task_proposal_token=request.callback_token,
+                task_proposal_message_chat_id=callback.message.chat.id if callback.message else None,
+                task_proposal_message_id=callback.message.message_id if callback.message else None,
+                return_to="tasks",
+            )
+            await callback.message.answer(
+                LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT,
+                reply_markup=calendar_for_today(),
+            )
+            await callback.answer()
+            return
+
+        await callback.answer(LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT, show_alert=True)
+
+    @router.callback_query(LeadStates.waiting_task_proposal_deadline, F.data.startswith(f"{CAL_PREFIX}:"))
+    async def lead_task_proposal_deadline_calendar(call: CallbackQuery, state: FSMContext):
+        parts = call.data.split(":")
+        action = parts[1]
+
+        if action == "ignore":
+            await call.answer()
+            return
+
+        if action == "cancel":
+            await state.clear()
+            await call.message.edit_text(ACTION_CANCELLED_TEXT)
+            await call.message.answer(LEAD_TASKS_TEXT, reply_markup=get_lead_tasks_keyboard())
+            await call.answer()
+            return
+
+        if action == "nav":
+            year = int(parts[2])
+            month = int(parts[3])
+            await call.message.edit_text(
+                LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT,
+                reply_markup=build_calendar(year, month),
+            )
+            await call.answer()
+            return
+
+        if action != "pick":
+            await call.answer()
+            return
+
+        year = int(parts[2])
+        month = int(parts[3])
+        day = int(parts[4])
+        deadline = date(year, month, day).strftime("%Y-%m-%d")
+
+        data = await state.get_data()
+        token = data.get("task_proposal_token")
+        request = await asyncio.to_thread(
+            task_request_service.get_request_for_lead_by_token,
+            token,
+            call.from_user.id,
+        )
+
+        if request is None:
+            await state.clear()
+            await call.message.edit_text(LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT)
+            await call.message.answer(LEAD_TASKS_TEXT, reply_markup=get_lead_tasks_keyboard())
+            await call.answer()
+            return
+
+        try:
+            await asyncio.to_thread(
+                tasks_service.create_task_created,
+                request.title,
+                request.description,
+                request.author_id,
+                call.from_user.id,
+                deadline,
+                request.created_at,
+                None,
+            )
+            await asyncio.to_thread(task_request_service.delete_related_requests, request)
+        except Exception as exc:
+            logger.exception("Ошибка принятия предложенной задачи: %s", exc)
+            await state.clear()
+            await call.message.answer(
+                f"Ошибка при принятии задачи: {exc}",
+                reply_markup=get_lead_tasks_keyboard(),
+            )
+            await call.answer()
+            return
+
+        proposal_message_chat_id = data.get("task_proposal_message_chat_id")
+        proposal_message_id = data.get("task_proposal_message_id")
+
+        await state.clear()
+
+        if proposal_message_chat_id and proposal_message_id:
+            try:
+                await call.bot.delete_message(
+                    chat_id=proposal_message_chat_id,
+                    message_id=proposal_message_id,
+                )
+            except Exception:
+                pass
+
+        await call.message.edit_text(LEAD_CREATE_TASK_DEADLINE_SELECTED.format(deadline=deadline))
+        await call.message.answer(
+            LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS,
+            reply_markup=get_lead_tasks_keyboard(),
+        )
+        await call.answer()
 
     @router.message(F.text == Buttons.LEAD_CREATE_TASK)
     async def lead_task_create_start(message: Message, state: FSMContext):

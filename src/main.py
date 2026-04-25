@@ -88,7 +88,7 @@ async def main():
     dp.include_router(setup_task_request_router(auth_service, task_request_service))
     dp.include_router(setup_common_router(auth_service, visits_service))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
-    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service))
+    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service))
     dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service))
     dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service))
 

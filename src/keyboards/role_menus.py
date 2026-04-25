@@ -5,6 +5,7 @@ from constants.bot_constants import Buttons
 
 TASK_CALLBACK_PREFIX = "task_action"
 LEAD_REPORT_CALLBACK_PREFIX = "lead_report"
+TASK_PROPOSAL_CALLBACK_PREFIX = "task_proposal"
 
 
 def get_superuser_menu_keyboard():
@@ -36,13 +37,28 @@ def get_lead_main_keyboard():
     return builder.as_markup(resize_keyboard=True)
 
 
+def get_task_proposal_action_keyboard(token: str | int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text=Buttons.TASK_ACCEPT,
+        callback_data=f"{TASK_PROPOSAL_CALLBACK_PREFIX}:accept:{token}",
+    )
+    builder.button(
+        text="Отклонить",
+        callback_data=f"{TASK_PROPOSAL_CALLBACK_PREFIX}:reject:{token}",
+    )
+    builder.adjust(2)
+    return builder.as_markup()
+
+
 def get_lead_tasks_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.LEAD_CREATE_TASK)
+    builder.button(text=Buttons.LEAD_TASK_PROPOSALS)
     builder.button(text=Buttons.LEAD_TASKS_LIST)
     builder.button(text=Buttons.MAIN_MENU)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2)
+    builder.adjust(2, 1, 2)
     return builder.as_markup(resize_keyboard=True)
 
 
