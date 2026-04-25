@@ -19,6 +19,10 @@ from constants.texts import (
     LEAD_CREATE_TASK_SUCCESS,
     LEAD_CREATE_TASK_TITLE_PROMPT,
     LEAD_MENU_TEXT,
+    LEAD_BIND_REQUESTS_EMPTY_TEXT,
+    LEAD_BIND_REQUEST_ACCEPTED_TEXT,
+    LEAD_BIND_REQUEST_REJECTED_TEXT,
+    LEAD_BIND_REQUEST_NOT_FOUND_TEXT,
     LEAD_REPORT_NOT_FOUND_TEXT,
     LEAD_REPORTS_EMPTY_TEXT,
     LEAD_REPORTS_LIST_TEXT,
@@ -50,6 +54,7 @@ from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_t
 from keyboards.role_menus import (
     LEAD_REPORT_CALLBACK_PREFIX,
     TASK_PROPOSAL_CALLBACK_PREFIX,
+    MANAGER_BIND_CALLBACK_PREFIX,
     get_employee_selection_keyboard,
     get_lead_accept_comment_choice_keyboard,
     get_lead_cancel_keyboard,
@@ -58,11 +63,13 @@ from keyboards.role_menus import (
     get_lead_reports_keyboard,
     get_lead_tasks_keyboard,
     get_task_proposal_action_keyboard,
+    get_manager_bind_action_keyboard,
 )
 from roles import Role
 from services.accepted_tasks_service import AcceptedTasksService
 from services.auth_service import AuthService
 from services.reports_service import ReportRecord, ReportsService
+from services.manager_binding_service import ManagerBindingService, ManagerBindRequest
 from services.task_request_service import TaskRequestRecord, TaskRequestService
 from services.tasks_service import TaskRecord, TasksService, format_task_for_lead
 from services.visits_service import VisitsService
@@ -105,6 +112,18 @@ def format_task_proposal_for_lead(request: TaskRequestRecord, employee_label: st
     )
 
 
+def format_manager_bind_request_for_lead(request: ManagerBindRequest, employee_label: str) -> str:
+    safe_employee_label = escape(employee_label) if employee_label else "—"
+    safe_role = escape(request.employee_role.title)
+    safe_created_at = escape(request.created_at) if request.created_at else "—"
+    return (
+        f"<b>Запрос на привязку руководителя</b>\n"
+        f"<b>Пользователь:</b> {safe_employee_label}\n"
+        f"<b>Роль:</b> {safe_role}\n"
+        f"<b>Создано:</b> {safe_created_at}"
+    )
+
+
 def setup_lead_router(
     auth_service: AuthService,
     tasks_service: TasksService,
@@ -112,6 +131,7 @@ def setup_lead_router(
     reports_service: ReportsService,
     accepted_tasks_service: AcceptedTasksService,
     task_request_service: TaskRequestService,
+    manager_binding_service: ManagerBindingService,
 ):
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD))
@@ -146,6 +166,90 @@ def setup_lead_router(
                 VISIT_FINISH_NO_OPEN_TEXT,
                 reply_markup=get_lead_main_keyboard(),
             )
+
+
+    @router.message(F.text == Buttons.LEAD_BIND_REQUESTS)
+    async def lead_bind_requests(message: Message, state: FSMContext):
+        await state.clear()
+        requests = await asyncio.to_thread(
+            manager_binding_service.list_requests_for_lead,
+            message.from_user.id,
+        )
+
+        if not requests:
+            await message.answer(
+                LEAD_BIND_REQUESTS_EMPTY_TEXT,
+                reply_markup=get_lead_main_keyboard(),
+            )
+            return
+
+        for request in requests:
+            employee_label = await resolve_user_label(message.bot, request.employee_id)
+            await message.answer(
+                format_manager_bind_request_for_lead(request, employee_label),
+                reply_markup=get_manager_bind_action_keyboard(request.request_id),
+                parse_mode="HTML",
+            )
+
+    @router.callback_query(F.data.startswith(f"{MANAGER_BIND_CALLBACK_PREFIX}:"))
+    async def lead_bind_request_action(callback: CallbackQuery):
+        _, action, request_id = callback.data.split(":", 2)
+        request = await asyncio.to_thread(
+            manager_binding_service.get_request_by_id,
+            request_id,
+            callback.from_user.id,
+        )
+
+        if request is None:
+            await callback.answer(LEAD_BIND_REQUEST_NOT_FOUND_TEXT, show_alert=True)
+            return
+
+        if action == "reject":
+            employee_label = await resolve_user_label(callback.bot, request.employee_id)
+
+            employee_label = await resolve_user_label(callback.bot, request.employee_id)
+
+
+
+            await asyncio.to_thread(manager_binding_service.delete_request, request.request_id)
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer(
+                LEAD_BIND_REQUEST_REJECTED_TEXT,
+                reply_markup=get_lead_main_keyboard(),
+            )
+            await callback.answer()
+            return
+
+        if action == "accept":
+            success = await asyncio.to_thread(
+                auth_service.add_manager_for_user,
+                request.employee_id,
+                request.employee_role,
+                callback.from_user.id,
+            )
+            if not success:
+                await callback.answer(LEAD_BIND_REQUEST_NOT_FOUND_TEXT, show_alert=True)
+                return
+
+            employee_label = await resolve_user_label(callback.bot, request.employee_id)
+
+            await asyncio.to_thread(manager_binding_service.delete_request, request.request_id)
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer(
+                LEAD_BIND_REQUEST_ACCEPTED_TEXT.format(employee_label=employee_label),
+                reply_markup=get_lead_main_keyboard(),
+                parse_mode="HTML",
+            )
+            await callback.answer()
+            return
+
+        await callback.answer(LEAD_BIND_REQUEST_NOT_FOUND_TEXT, show_alert=True)
 
     @router.message(F.text == Buttons.LEAD_TASKS)
     async def lead_tasks_menu(message: Message, state: FSMContext):

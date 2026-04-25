@@ -131,3 +131,16 @@ SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с наз�
 SUPERUSER_REVOKE_ROLE_SUCCESS = "Роль {role} отозвана."
 SUPERUSER_REVOKE_ROLE_NOT_FOUND = "У пользователя уже нет этой роли."
 SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER = "Нельзя отозвать роль у последнего администратора."
+
+BIND_MANAGER_SELECT_TEXT = "Выберите руководителя, которому хотите отправить запрос."
+BIND_MANAGER_NO_LEADS_TEXT = "Не найдено доступных руководителей."
+BIND_MANAGER_INVALID_LEAD_TEXT = "Используйте кнопки ниже."
+BIND_MANAGER_REQUEST_SENT_TEXT = "Запрос на привязку руководителя отправлен."
+BIND_MANAGER_REQUEST_ALREADY_EXISTS_TEXT = "Такой запрос уже ожидает подтверждения."
+BIND_MANAGER_ALREADY_BOUND_TEXT = "Вы уже закреплены за этим руководителем."
+
+LEAD_BIND_REQUESTS = "Запросы на привязку"
+LEAD_BIND_REQUESTS_EMPTY_TEXT = "Нет активных запросов на привязку."
+LEAD_BIND_REQUEST_ACCEPTED_TEXT = "Запрос подтвержден. Пользователь {employee_label} закреплен за вами."
+LEAD_BIND_REQUEST_REJECTED_TEXT = "Запрос отклонен."
+LEAD_BIND_REQUEST_NOT_FOUND_TEXT = "Запрос не найден или уже обработан."
