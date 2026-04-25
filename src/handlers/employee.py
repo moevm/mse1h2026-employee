@@ -24,7 +24,13 @@ from constants.texts import (
     REPORT_TEXT_PROMPT,
     REPORT_EMPTY_TEXT,
     REPORT_SENT_TEXT,
-    ACTION_CANCELLED_TEXT
+    ACTION_CANCELLED_TEXT,
+    BIND_MANAGER_ALREADY_BOUND_TEXT,
+    BIND_MANAGER_INVALID_LEAD_TEXT,
+    BIND_MANAGER_NO_LEADS_TEXT,
+    BIND_MANAGER_REQUEST_ALREADY_EXISTS_TEXT,
+    BIND_MANAGER_REQUEST_SENT_TEXT,
+    BIND_MANAGER_SELECT_TEXT,
 )
 from filters.active_role import ActiveRoleFilter
 from services.tasks_service import format_task_for_assignee
@@ -35,14 +41,17 @@ from keyboards.role_menus import (
     get_employee_menu_keyboard,
     get_task_action_keyboard,
     get_report_cancel_keyboard,
+    get_manager_selection_keyboard,
 )
 from roles import Role
 from services.auth_service import AuthService
 from services.tasks_service import TasksService
 from services.visits_service import VisitsService
 from services.reports_service import ReportsService
+from services.manager_binding_service import ManagerBindingService
 from states.task_request import TaskRequestStates
 from states.task_report import TaskReportStates
+from states.manager_binding import ManagerBindingStates
 
 
 def setup_employee_router(
@@ -50,6 +59,7 @@ def setup_employee_router(
     visits_service: VisitsService,
     tasks_service: TasksService,
     reports_service: ReportsService,
+    manager_binding_service: ManagerBindingService,
 ):
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.EMPLOYEE))
@@ -93,6 +103,111 @@ def setup_employee_router(
             OFFER_TASK_TITLE_PROMPT,
             reply_markup=get_cancel_keyboard(),
         )
+
+
+    @router.message(F.text == Buttons.EMPLOYEE_BIND_MANAGER)
+    async def bind_manager_start(message: Message, state: FSMContext):
+        await state.clear()
+        lead_ids = await asyncio.to_thread(auth_service.get_user_ids_by_role, Role.LEAD)
+        lead_ids = [lead_id for lead_id in lead_ids if lead_id != message.from_user.id]
+
+        if not lead_ids:
+            await message.answer(BIND_MANAGER_NO_LEADS_TEXT, reply_markup=get_employee_menu_keyboard())
+            return
+
+        current_manager_ids = await asyncio.to_thread(
+            auth_service.get_manager_ids_for_user,
+            message.from_user.id,
+            Role.EMPLOYEE,
+        )
+
+        available_lead_ids = [
+            lead_id for lead_id in lead_ids
+            if lead_id not in current_manager_ids
+        ]
+
+        lead_labels = await asyncio.gather(
+            *(resolve_user_label(message.bot, lead_id) for lead_id in available_lead_ids),
+            return_exceptions=True,
+        )
+
+        lead_options: dict[str, int] = {}
+        lead_names: list[str] = []
+
+        for index, (lead_id, label) in enumerate(zip(available_lead_ids, lead_labels), start=1):
+            if isinstance(label, Exception) or str(label).startswith("ID:"):
+                display = f"Руководитель {index}"
+            else:
+                display = str(label)
+
+            original_display = display
+            duplicate_index = 2
+            while display in lead_options:
+                display = f"{original_display} ({duplicate_index})"
+                duplicate_index += 1
+
+            lead_options[display] = lead_id
+            lead_names.append(display)
+
+        if not lead_options:
+            await message.answer(BIND_MANAGER_ALREADY_BOUND_TEXT, reply_markup=get_employee_menu_keyboard())
+            return
+
+        await state.set_state(ManagerBindingStates.waiting_lead)
+        await state.update_data(bind_lead_options=lead_options)
+        await message.answer(
+            BIND_MANAGER_SELECT_TEXT,
+            reply_markup=get_manager_selection_keyboard(lead_names),
+        )
+
+    @router.message(ManagerBindingStates.waiting_lead, F.text == Buttons.CANCEL)
+    async def bind_manager_cancel(message: Message, state: FSMContext):
+        await state.clear()
+        await message.answer(ACTION_CANCELLED_TEXT, reply_markup=get_employee_menu_keyboard())
+
+    @router.message(ManagerBindingStates.waiting_lead, F.text)
+    async def bind_manager_selected(message: Message, state: FSMContext):
+        data = await state.get_data()
+        lead_options: dict[str, int] = data.get("bind_lead_options", {})
+        selected = message.text.strip()
+
+        if selected not in lead_options:
+            await message.answer(
+                BIND_MANAGER_INVALID_LEAD_TEXT,
+                reply_markup=get_manager_selection_keyboard(list(lead_options.keys())),
+            )
+            return
+
+        lead_id = lead_options[selected]
+        if lead_id == message.from_user.id:
+            await message.answer(
+                BIND_MANAGER_INVALID_LEAD_TEXT,
+                reply_markup=get_manager_selection_keyboard(list(lead_options.keys())),
+            )
+            return
+
+        current_manager_ids = await asyncio.to_thread(
+            auth_service.get_manager_ids_for_user,
+            message.from_user.id,
+            Role.EMPLOYEE,
+        )
+        if lead_id in current_manager_ids:
+            await state.clear()
+            await message.answer(BIND_MANAGER_ALREADY_BOUND_TEXT, reply_markup=get_employee_menu_keyboard())
+            return
+
+        request = await asyncio.to_thread(
+            manager_binding_service.create_request,
+            message.from_user.id,
+            Role.EMPLOYEE,
+            lead_id,
+        )
+
+        await state.clear()
+        if request is None:
+            await message.answer(BIND_MANAGER_REQUEST_ALREADY_EXISTS_TEXT, reply_markup=get_employee_menu_keyboard())
+        else:
+            await message.answer(BIND_MANAGER_REQUEST_SENT_TEXT, reply_markup=get_employee_menu_keyboard())
 
     @router.message(F.text == Buttons.EMPLOYEE_TASKS_LIST)
     async def my_task_list(message: Message):

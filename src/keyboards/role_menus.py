@@ -7,6 +7,7 @@ TASK_CALLBACK_PREFIX = "task_action"
 LEAD_REPORT_CALLBACK_PREFIX = "lead_report"
 TASK_PROPOSAL_CALLBACK_PREFIX = "task_proposal"
 SUPERUSER_REVOKE_CALLBACK_PREFIX = "superuser_revoke"
+MANAGER_BIND_CALLBACK_PREFIX = "manager_bind"
 
 def get_superuser_menu_keyboard():
     builder = ReplyKeyboardBuilder()
@@ -33,8 +34,9 @@ def get_lead_main_keyboard():
     builder.button(text=Buttons.LEAD_TASKS)
     builder.button(text=Buttons.LEAD_REPORTS)
     builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
+    builder.button(text=Buttons.LEAD_BIND_REQUESTS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 1)
+    builder.adjust(2, 2, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -105,8 +107,9 @@ def get_employee_menu_keyboard():
     builder.button(text=Buttons.EMPLOYEE_CREATE_TASK)
     builder.button(text=Buttons.EMPLOYEE_TASKS_LIST)
     builder.button(text=Buttons.EMPLOYEE_REPORT_COMMENT)
+    builder.button(text=Buttons.EMPLOYEE_BIND_MANAGER)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 1, 1)
+    builder.adjust(2, 2, 1, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -116,8 +119,9 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.INTERN_TASKS_LIST)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
+    builder.button(text=Buttons.INTERN_BIND_MANAGER)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 1, 1, 1)
+    builder.adjust(2, 1, 1, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -220,4 +224,18 @@ def get_superuser_revoke_role_keyboard(tg_id: int, roles: list[str]):
             callback_data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:{tg_id}:{role}",
         )
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def get_manager_bind_action_keyboard(request_id: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Подтвердить",
+        callback_data=f"{MANAGER_BIND_CALLBACK_PREFIX}:accept:{request_id}",
+    )
+    builder.button(
+        text="Отклонить",
+        callback_data=f"{MANAGER_BIND_CALLBACK_PREFIX}:reject:{request_id}",
+    )
+    builder.adjust(2)
     return builder.as_markup()
