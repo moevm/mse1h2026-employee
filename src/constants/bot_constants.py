@@ -9,6 +9,7 @@ class Buttons:
     REQUEST_SUPERUSER = "<Администратор>"
 
     EXIT = "Выйти"
+    NOTIFICATION_SETTINGS = "Настройка уведомлений"
     CANCEL = "Отмена"
     MAIN_MENU = "Главное меню"
 

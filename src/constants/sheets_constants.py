@@ -15,4 +15,17 @@ STATUS_COLUMN = "Status"
 CREATED_AT_COLUMN = "CreatedAt"
 
 STARTED_AT_COLUMN = "StartedAt"
+<<<<<<< Updated upstream
 ENDED_AT_COLUMN = "EndedAt"
+=======
+ENDED_AT_COLUMN = "EndedAt"
+
+BIND_REQUEST_ID_COLUMN = "RequestID"
+BIND_EMPLOYEE_ID_COLUMN = "EmployeeID"
+BIND_EMPLOYEE_ROLE_COLUMN = "EmployeeRole"
+BIND_LEAD_ID_COLUMN = "LeadID"
+BIND_CREATED_AT_COLUMN = "CreatedAt"
+NOTIFICATION_MORNING_TIME_COLUMN = "NotificationMorningTime"
+NOTIFICATION_EVENING_TIME_COLUMN = "NotificationEveningTime"
+NOTIFICATION_TIMEZONE_COLUMN = "NotificationTimezone"
+>>>>>>> Stashed changes

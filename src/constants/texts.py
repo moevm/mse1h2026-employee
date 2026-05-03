@@ -117,3 +117,52 @@ EXIT_WITH_OPEN_VISIT_TEXT = (
 REPORT_TEXT_PROMPT = "Введите текст отчета одним сообщением."
 REPORT_EMPTY_TEXT = "Текст отчета не должен быть пустым."
 REPORT_SENT_TEXT = "Отчет отправлен. Статус задачи изменен на \"На рассмотрении\"."
+<<<<<<< Updated upstream
+=======
+
+SUPERUSER_REVOKE_ROLE_LIST_TEXT = "Список пользователей с ролями:"
+SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с назначенными ролями."
+SUPERUSER_REVOKE_ROLE_SUCCESS = "Роль {role} отозвана."
+SUPERUSER_REVOKE_ROLE_NOT_FOUND = "У пользователя уже нет этой роли."
+SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER = "Нельзя отозвать роль у последнего администратора."
+
+BIND_MANAGER_SELECT_TEXT = "Выберите руководителя, которому хотите отправить запрос."
+BIND_MANAGER_NO_LEADS_TEXT = "Не найдено доступных руководителей."
+BIND_MANAGER_INVALID_LEAD_TEXT = "Используйте кнопки ниже."
+BIND_MANAGER_REQUEST_SENT_TEXT = "Запрос на привязку руководителя отправлен."
+BIND_MANAGER_REQUEST_ALREADY_EXISTS_TEXT = "Такой запрос уже ожидает подтверждения."
+BIND_MANAGER_ALREADY_BOUND_TEXT = "Вы уже закреплены за этим руководителем."
+
+LEAD_BIND_REQUESTS = "Запросы на привязку"
+LEAD_BIND_REQUESTS_EMPTY_TEXT = "Нет активных запросов на привязку."
+LEAD_BIND_REQUEST_ACCEPTED_TEXT = "Запрос подтвержден. Пользователь {employee_label} закреплен за вами."
+LEAD_BIND_REQUEST_REJECTED_TEXT = "Запрос отклонен."
+LEAD_BIND_REQUEST_NOT_FOUND_TEXT = "Запрос не найден или уже обработан."
+
+NOTIFICATION_SETTINGS_TEXT = (
+    "Текущие настройки уведомлений:\n"
+    "• начало дня: {morning_time}\n"
+    "• конец дня: {evening_time}\n"
+    "• часовой пояс: {timezone}\n\n"
+    "Отправьте новые настройки одним сообщением в формате:\n"
+    "<code>09:00 18:00 Europe/Moscow</code>\n\n"
+    "Время указывается в формате HH:MM."
+)
+NOTIFICATION_SETTINGS_SUCCESS_TEXT = (
+    "Настройки уведомлений сохранены:\n"
+    "• начало дня: {morning_time}\n"
+    "• конец дня: {evening_time}\n"
+    "• часовой пояс: {timezone}"
+)
+NOTIFICATION_SETTINGS_FORMAT_ERROR_TEXT = (
+    "Неверный формат. Отправьте настройки так:\n"
+    "<code>09:00 18:00 Europe/Moscow</code>"
+)
+NOTIFICATION_SETTINGS_TIME_ERROR_TEXT = "Некорректное время. Используйте формат HH:MM, например 09:00."
+NOTIFICATION_SETTINGS_TIMEZONE_ERROR_TEXT = "Некорректный часовой пояс. Пример: Europe/Moscow."
+
+NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
+    "Некорректный порядок времени. "
+    "Время начала дня должно быть раньше времени окончания дня."
+)
+>>>>>>> Stashed changes
