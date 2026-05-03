@@ -136,3 +136,67 @@ def make_task(
         updated_at="2026-01-01 09:00:00",
         deadline=deadline,
     )
+
+class FakeAuthUser:
+    def __init__(self, tg_id: int, roles: list[Role]):
+        self.tg_id = tg_id
+        self.roles = roles
+
+class FakeSuperuserAuthService:
+    def __init__(self, *,
+        users: list[FakeAuthUser] | None = None,
+        can_superuser: dict[int, bool] | None = None,
+        revoke_map: dict[tuple[int, Role], bool] | None = None,
+        roles_after_revoke: dict[int, list[Role]] | None = None,
+    ):
+        self.users = users or []
+        self.can_superuser = can_superuser or {}
+        self.revoke_map = revoke_map or {}
+        self.roles_after_revoke = roles_after_revoke or {}
+
+        self.revoke_calls: list[tuple[int, Role]] = []
+        self.get_user_roles_calls: list[int] = []
+
+    def get_all_users(self) -> list[FakeAuthUser]:
+        return list(self.users)
+
+    def can_login_as_role(self, tg_id: int, role: Role) -> bool:
+        if role == Role.SUPERUSER:
+            return self.can_superuser.get(tg_id, False)
+        return True
+
+    def revoke_role(self, tg_id: int, role: Role) -> bool:
+        self.revoke_calls.append((tg_id, role))
+        return self.revoke_map.get((tg_id, role), False)
+
+    def get_user_roles(self, tg_id: int) -> list[Role]:
+        self.get_user_roles_calls.append(tg_id)
+        return list(self.roles_after_revoke.get(tg_id, []))
+
+class FakeRoleRequestService:
+    def __init__(
+        self,
+        *,
+        requests: list[dict[str, str]] | None = None,
+        approve_map: dict[tuple[int, str], bool] | None = None,
+        deny_map: dict[tuple[int, str], bool] | None = None,
+    ):
+        self.requests = requests or []
+        self.approve_map = approve_map or {}
+        self.deny_map = deny_map or {}
+
+        self.get_calls = 0
+        self.approve_calls: list[tuple[int, Role]] = []
+        self.deny_calls: list[tuple[int, Role]] = []
+
+    def get_all_requests(self) -> list[dict[str, str]]:
+        self.get_calls += 1
+        return list(self.requests)
+
+    def approve_request(self, tg_id: int, role: Role, _auth_service: Any) -> bool:
+        self.approve_calls.append((tg_id, role))
+        return self.approve_map.get((tg_id, role.value), False)
+
+    def deny_request(self, tg_id: int, role: Role) -> bool:
+        self.deny_calls.append((tg_id, role))
+        return self.deny_map.get((tg_id, role.value), False)
