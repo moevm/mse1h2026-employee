@@ -64,6 +64,26 @@ class AuthService:
         unique_ids = list(dict.fromkeys(tg_ids))
         return unique_ids
     
+
+    def get_user_ids_by_role(self, role: Role):
+        records = self.sheets_client.get_all_records(self.roles_sheet_name)
+
+        tg_ids: list[int] = []
+        normalized_role = role.value.strip().lower()
+
+        for row in records:
+            row_tg_id = str(row.get(TG_ID_COLUMN, "")).strip()
+            row_role = str(row.get(ROLE_COLUMN, "")).strip().lower()
+
+            if not row_tg_id or row_role != normalized_role:
+                continue
+
+            try:
+                tg_ids.append(int(row_tg_id))
+            except ValueError:
+                continue
+
+        return list(dict.fromkeys(tg_ids))
     def get_manager_ids_for_user(self, tg_id: int, role: Role | None = None):
         records = self.sheets_client.get_all_records(self.roles_sheet_name)
 
@@ -126,6 +146,110 @@ class AuthService:
 
     def get_employees_for_manager(self, manager_id: int) -> list[int]:
         return self.get_team_members_for_manager(manager_id, (Role.EMPLOYEE,))
+    
+    def get_all_users(self) -> list[AuthUser]:
+        return [
+            AuthUser(tg_id=tg_id, roles=self.get_user_roles(tg_id))
+            for tg_id in self.get_user_ids()
+            if self.get_user_roles(tg_id)
+        ]
+
+    def revoke_role(self, tg_id: int, role: Role) -> bool:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        if not values:
+            return False
+
+        headers = values[0]
+        tg_index = next(
+            (index for index, header in enumerate(headers) if str(header).strip() == TG_ID_COLUMN),
+            None,
+        )
+        role_index = next(
+            (index for index, header in enumerate(headers) if str(header).strip() == ROLE_COLUMN),
+            None,
+        )
+
+        if tg_index is None or role_index is None:
+            return False
+
+        matching_rows: list[int] = []
+        normalized_tg_id = str(tg_id).strip()
+        normalized_role = role.value.strip().lower()
+
+        for row_index, row in enumerate(values[1:], start=2):
+            row_tg_id = str(row[tg_index]).strip() if tg_index < len(row) else ""
+            row_role = str(row[role_index]).strip().lower() if role_index < len(row) else ""
+
+            if row_tg_id == normalized_tg_id and row_role == normalized_role:
+                matching_rows.append(row_index)
+
+        if not matching_rows:
+            return False
+
+        for row_index in reversed(matching_rows):
+            self.sheets_client.delete_row(self.roles_sheet_name, row_index)
+
+        if self.get_active_role(tg_id) == role:
+            self.logout(tg_id)
+
+        return True
+    
+
+    def add_manager_for_user(self, tg_id: int, role: Role, manager_id: int) -> bool:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        if not values:
+            return False
+
+        headers = values[0]
+
+        def find_col(header_name: str) -> int | None:
+            return next(
+                (index + 1 for index, header in enumerate(headers) if str(header).strip() == header_name),
+                None,
+            )
+
+        tg_col = find_col(TG_ID_COLUMN)
+        role_col = find_col(ROLE_COLUMN)
+        managers_col = find_col(MANAGER_IDS_COLUMN)
+
+        if tg_col is None or role_col is None:
+            return False
+
+        if managers_col is None:
+            worksheet = self.sheets_client.get_worksheet(self.roles_sheet_name)
+            managers_col = len(headers) + 1
+            worksheet.update_cell(1, managers_col, MANAGER_IDS_COLUMN)
+
+        normalized_tg_id = str(tg_id).strip()
+        normalized_role = role.value.strip().lower()
+        normalized_manager_id = str(manager_id).strip()
+
+        for row_index, row in enumerate(values[1:], start=2):
+            row_tg_id = str(row[tg_col - 1]).strip() if tg_col - 1 < len(row) else ""
+            row_role = str(row[role_col - 1]).strip().lower() if role_col - 1 < len(row) else ""
+
+            if row_tg_id != normalized_tg_id or row_role != normalized_role:
+                continue
+
+            raw_managers = str(row[managers_col - 1]).strip() if managers_col - 1 < len(row) else ""
+            manager_ids = []
+            for value in re.split(r"[,;\n]+", raw_managers):
+                digits = re.sub(r"\D", "", value)
+                if digits:
+                    manager_ids.append(digits)
+
+            if normalized_manager_id not in manager_ids:
+                manager_ids.append(normalized_manager_id)
+                self.sheets_client.update_cell(
+                    self.roles_sheet_name,
+                    row_index,
+                    managers_col,
+                    ",".join(dict.fromkeys(manager_ids)),
+                )
+
+            return True
+
+        return False
 
     def _ensure_roles_column(self, column_name: str) -> int:
         values = self.sheets_client.get_all_values(self.roles_sheet_name)

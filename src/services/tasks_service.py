@@ -150,13 +150,17 @@ class TasksService:
         employee_id: int,
         author_id: int,
         deadline: str,
+        created_at: str | None = None,
+        updated_at: str | None = None,
     ) -> str:
         now = self._now_str()
         task_id = uuid.uuid4().hex
+        created_at = created_at or now
+        updated_at = updated_at or now
 
         self.sheets_client.append_row(
             self.tasks_sheet_name,
-            [task_id, title, description, employee_id, author_id, "created", now, now, deadline],
+            [task_id, title, description, employee_id, author_id, "created", created_at, updated_at, deadline],
         )
         return task_id
 

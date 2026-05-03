@@ -2,10 +2,33 @@
 
 set -e
 
-sudo git clone https://github.com/moevm/mse1h2026-employee.git
+cd "$(dirname "$0")/.."
 
-cd mse1h2026-employee/src
+echo "Проверка Python..."
+if command -v python3 &>/dev/null; then
+    echo "Python найден."
+else
+    echo "Ошибка: Python3 не найден."
+    exit 1
+fi
 
-sudo python3 -m venv .venv
+if [ ! -f ".env" ]; then
+    echo "Ошибка: .env не найден."
+    exit 1
+fi
 
-sudo bash -c "source .venv/bin/activate && pip install -r requirements.txt"
+echo "Настройка .venv..."
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
+fi
+
+source .venv/bin/activate
+
+echo "Установка зависимостей..."
+pip install --upgrade pip --quiet
+pip install -r requirements.txt --quiet
+
+echo "Проверка суперпользователя..."
+python3 setup/init_superuser.py
+
+echo "Установка завершена."

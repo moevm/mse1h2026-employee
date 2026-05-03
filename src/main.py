@@ -22,6 +22,7 @@ from services.tasks_service import TasksService
 from services.visits_service import VisitsService
 from services.reports_service import ReportsService
 from services.accepted_tasks_service import AcceptedTasksService
+from services.manager_binding_service import ManagerBindingService
 
 
 async def main():
@@ -83,6 +84,11 @@ async def main():
         accepted_tasks_sheet_name=config.sheets.accepted_tasks_sheet_name,
     )
 
+    manager_binding_service = ManagerBindingService(
+        sheets_client=sheets_client,
+        sheet_name=config.sheets.manager_bind_requests_sheet_name,
+    )
+
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service, role_request_service))
     dp.include_router(setup_task_request_router(auth_service, task_request_service))
@@ -94,9 +100,9 @@ async def main():
         default_timezone=config.reminders.timezone,
     ))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
-    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service))
-    dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service))
-    dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service))
+    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service, manager_binding_service))
+    dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service))
+    dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service))
 
     await reminder_service.start(bot)
     try:

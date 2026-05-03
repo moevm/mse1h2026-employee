@@ -3,6 +3,7 @@ ROLE_COLUMN = "Role"
 MANAGER_IDS_COLUMN = "ManagerIDs"
 
 TASK_ID_COLUMN = "TaskId"
+OFFER_ID_COLUMN = "OfferID"
 EMPLOYEE_ID_COLUMN = "EmployeeID"
 DEADLINE_COLUMN = "Deadline"
 UPDATED_AT_COLUMN = "UpdatedAt"
@@ -15,9 +16,6 @@ STATUS_COLUMN = "Status"
 CREATED_AT_COLUMN = "CreatedAt"
 
 STARTED_AT_COLUMN = "StartedAt"
-<<<<<<< Updated upstream
-ENDED_AT_COLUMN = "EndedAt"
-=======
 ENDED_AT_COLUMN = "EndedAt"
 
 BIND_REQUEST_ID_COLUMN = "RequestID"
@@ -28,4 +26,3 @@ BIND_CREATED_AT_COLUMN = "CreatedAt"
 NOTIFICATION_MORNING_TIME_COLUMN = "NotificationMorningTime"
 NOTIFICATION_EVENING_TIME_COLUMN = "NotificationEveningTime"
 NOTIFICATION_TIMEZONE_COLUMN = "NotificationTimezone"
->>>>>>> Stashed changes

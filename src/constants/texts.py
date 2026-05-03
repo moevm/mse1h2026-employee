@@ -37,6 +37,13 @@ MY_TASKS_TEXT = "Список задач пока реализован как з
 COMPLETE_TASK_TEXT = "Отправка отчета пока реализована как заглушка."
 REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
 
+LEAD_TASK_PROPOSALS_LIST_TEXT = "Предложенные задачи:"
+LEAD_TASK_PROPOSALS_EMPTY_TEXT = "Нет предложенных задач."
+LEAD_TASK_PROPOSAL_NOT_FOUND_TEXT = "Предложение не найдено или уже обработано."
+LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT = "Выберите дедлайн для принятой задачи."
+LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS = "Задача принята и создана."
+LEAD_TASK_PROPOSAL_REJECT_SUCCESS = "Предложение отклонено."
+
 LEAD_TASKS_LIST_TEXT = "Ваши созданные задачи:"
 LEAD_TASKS_EMPTY_TEXT = "У вас пока нет созданных задач."
 LEAD_CREATE_TASK_TITLE_PROMPT = "Введите название задачи одним сообщением."
@@ -74,9 +81,9 @@ ACTION_CANCELLED_TEXT = "Действие отменено."
 
 ROLE_REQUEST_CHOOSE_TEXT = "Выберите роль, которую хотите получить:"
 
-ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
+NO_AVAILABLE_ROLES_TEXT = "У вас уже есть все доступные роли."
 
-ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
+ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
 
 START_WORK_REMINDER_TEXT = (
     "🔔 <b>Напоминание</b>\n\nПеред началом рабочего дня необходимо отметиться."
@@ -85,8 +92,6 @@ START_WORK_REMINDER_TEXT = (
 END_WORK_REMINDER_TEXT = (
     "🔔 <b>Напоминание</b>\n\nРабочий день завершается — не забудьте отметиться."
 )
-
-ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
 
 START_MENU_OPEN_TEXT = "Открываю стартовое меню."
 
@@ -99,10 +104,9 @@ SUPERUSER_CONFIRM_ROLE_FORMAT_ERROR = "Неверный формат. Ожида
 
 OFFER_TASK_TITLE_PROMPT = "Введите заголовок задачи одним сообщением."
 OFFER_TASK_DESCRIPTION_PROMPT = "Опишите задачу одним сообщением."
-OFFER_TASK_MANAGER_PROMPT = "Выберите руководителя."
 OFFER_TASK_NO_MANAGERS_TEXT = "Не найдено прикрепленных руководителей."
 OFFER_TASK_INVALID_MANAGER_TEXT = "Используйте кнопки ниже."
-OFFER_TASK_SUCCESS_TEXT = "Задача успешно предложена на согласование руководителю."
+OFFER_TASK_SUCCESS_TEXT = "Задача отправлена вашим руководителям для подтверждения."
 
 VISIT_START_SUCCESS_TEXT = "Начало рабочего дня зафиксировано."
 VISIT_START_ALREADY_OPEN_TEXT = "У вас уже есть незавершённая запись рабочего дня."
@@ -117,8 +121,6 @@ EXIT_WITH_OPEN_VISIT_TEXT = (
 REPORT_TEXT_PROMPT = "Введите текст отчета одним сообщением."
 REPORT_EMPTY_TEXT = "Текст отчета не должен быть пустым."
 REPORT_SENT_TEXT = "Отчет отправлен. Статус задачи изменен на \"На рассмотрении\"."
-<<<<<<< Updated upstream
-=======
 
 SUPERUSER_REVOKE_ROLE_LIST_TEXT = "Список пользователей с ролями:"
 SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с назначенными ролями."
@@ -165,4 +167,3 @@ NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
     "Некорректный порядок времени. "
     "Время начала дня должно быть раньше времени окончания дня."
 )
->>>>>>> Stashed changes
