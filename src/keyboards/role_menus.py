@@ -9,6 +9,7 @@ TASK_PROPOSAL_CALLBACK_PREFIX = "task_proposal"
 SUPERUSER_REVOKE_CALLBACK_PREFIX = "superuser_revoke"
 MANAGER_BIND_CALLBACK_PREFIX = "manager_bind"
 
+
 def get_superuser_menu_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.SUPERUSER_ROLE_REQUESTS)
@@ -35,8 +36,9 @@ def get_lead_main_keyboard():
     builder.button(text=Buttons.LEAD_REPORTS)
     builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
     builder.button(text=Buttons.LEAD_BIND_REQUESTS)
+    builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 1, 1)
+    builder.adjust(2, 2, 2, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -108,8 +110,9 @@ def get_employee_menu_keyboard():
     builder.button(text=Buttons.EMPLOYEE_TASKS_LIST)
     builder.button(text=Buttons.EMPLOYEE_REPORT_COMMENT)
     builder.button(text=Buttons.EMPLOYEE_BIND_MANAGER)
+    builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 1, 1, 1)
+    builder.adjust(2, 2, 2, 1, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -120,8 +123,9 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.INTERN_TASKS_LIST)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
     builder.button(text=Buttons.INTERN_BIND_MANAGER)
+    builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 1, 1, 1, 1)
+    builder.adjust(2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -209,6 +213,7 @@ def get_lead_accept_comment_choice_keyboard(task_id: str) -> InlineKeyboardMarku
             ]
         ]
     )
+
 
 def get_superuser_revoke_role_keyboard(tg_id: int, roles: list[str]):
     builder = InlineKeyboardBuilder()

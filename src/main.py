@@ -92,7 +92,13 @@ async def main():
     dp.include_router(setup_start_router(auth_service))
     dp.include_router(setup_auth_router(auth_service, role_request_service))
     dp.include_router(setup_task_request_router(auth_service, task_request_service))
-    dp.include_router(setup_common_router(auth_service, visits_service))
+    dp.include_router(setup_common_router(
+        auth_service,
+        visits_service,
+        default_morning_time=config.reminders.morning_time,
+        default_evening_time=config.reminders.evening_time,
+        default_timezone=config.reminders.timezone,
+    ))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
     dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service, manager_binding_service))
     dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service))

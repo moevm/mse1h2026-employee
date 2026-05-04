@@ -85,8 +85,6 @@ NO_AVAILABLE_ROLES_TEXT = "У вас уже есть все доступные �
 
 ROLE_REQUEST_SENT_TEXT = "Запрос на роль '{role}' отправлен"
 
-ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
-
 START_WORK_REMINDER_TEXT = (
     "🔔 <b>Напоминание</b>\n\nПеред началом рабочего дня необходимо отметиться."
 )
@@ -94,8 +92,6 @@ START_WORK_REMINDER_TEXT = (
 END_WORK_REMINDER_TEXT = (
     "🔔 <b>Напоминание</b>\n\nРабочий день завершается — не забудьте отметиться."
 )
-
-ROLE_REQUEST_NOT_READY_TEXT = "Раздел получения роли пока не реализован."
 
 START_MENU_OPEN_TEXT = "Открываю стартовое меню."
 
@@ -144,3 +140,30 @@ LEAD_BIND_REQUESTS_EMPTY_TEXT = "Нет активных запросов на �
 LEAD_BIND_REQUEST_ACCEPTED_TEXT = "Запрос подтвержден. Пользователь {employee_label} закреплен за вами."
 LEAD_BIND_REQUEST_REJECTED_TEXT = "Запрос отклонен."
 LEAD_BIND_REQUEST_NOT_FOUND_TEXT = "Запрос не найден или уже обработан."
+
+NOTIFICATION_SETTINGS_TEXT = (
+    "Текущие настройки уведомлений:\n"
+    "• начало дня: {morning_time}\n"
+    "• конец дня: {evening_time}\n"
+    "• часовой пояс: {timezone}\n\n"
+    "Отправьте новые настройки одним сообщением в формате:\n"
+    "<code>09:00 18:00 Europe/Moscow</code>\n\n"
+    "Время указывается в формате HH:MM."
+)
+NOTIFICATION_SETTINGS_SUCCESS_TEXT = (
+    "Настройки уведомлений сохранены:\n"
+    "• начало дня: {morning_time}\n"
+    "• конец дня: {evening_time}\n"
+    "• часовой пояс: {timezone}"
+)
+NOTIFICATION_SETTINGS_FORMAT_ERROR_TEXT = (
+    "Неверный формат. Отправьте настройки так:\n"
+    "<code>09:00 18:00 Europe/Moscow</code>"
+)
+NOTIFICATION_SETTINGS_TIME_ERROR_TEXT = "Некорректное время. Используйте формат HH:MM, например 09:00."
+NOTIFICATION_SETTINGS_TIMEZONE_ERROR_TEXT = "Некорректный часовой пояс. Пример: Europe/Moscow."
+
+NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
+    "Некорректный порядок времени. "
+    "Время начала дня должно быть раньше времени окончания дня."
+)

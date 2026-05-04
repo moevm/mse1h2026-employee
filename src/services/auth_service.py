@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
-from constants.sheets_constants import MANAGER_IDS_COLUMN, ROLE_COLUMN, TG_ID_COLUMN
+from constants.sheets_constants import (
+    MANAGER_IDS_COLUMN,
+    NOTIFICATION_EVENING_TIME_COLUMN,
+    NOTIFICATION_MORNING_TIME_COLUMN,
+    NOTIFICATION_TIMEZONE_COLUMN,
+    ROLE_COLUMN,
+    TG_ID_COLUMN,
+)
 from roles import Role
 from services.google_sheets import GoogleSheetsClient
 
@@ -243,6 +250,98 @@ class AuthService:
             return True
 
         return False
+
+    def _ensure_roles_column(self, column_name: str) -> int:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        headers = values[0] if values else []
+
+        for index, header in enumerate(headers, start=1):
+            if str(header).strip() == column_name:
+                return index
+
+        worksheet = self.sheets_client.get_worksheet(self.roles_sheet_name)
+        col_index = len(headers) + 1
+        worksheet.update_cell(1, col_index, column_name)
+        return col_index
+
+    def _find_roles_column(self, headers: list[str], column_name: str) -> int | None:
+        return next(
+            (index + 1 for index, header in enumerate(headers) if str(header).strip() == column_name),
+            None,
+        )
+
+    def get_notification_settings(self, tg_id: int, default_morning_time: str, default_evening_time: str, default_timezone: str) -> dict[str, str]:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        if not values:
+            return {
+                "morning_time": default_morning_time,
+                "evening_time": default_evening_time,
+                "timezone": default_timezone,
+            }
+
+        headers = values[0]
+        tg_col = self._find_roles_column(headers, TG_ID_COLUMN)
+        morning_col = self._find_roles_column(headers, NOTIFICATION_MORNING_TIME_COLUMN)
+        evening_col = self._find_roles_column(headers, NOTIFICATION_EVENING_TIME_COLUMN)
+        timezone_col = self._find_roles_column(headers, NOTIFICATION_TIMEZONE_COLUMN)
+
+        if tg_col is None:
+            return {
+                "morning_time": default_morning_time,
+                "evening_time": default_evening_time,
+                "timezone": default_timezone,
+            }
+
+        normalized_tg_id = str(tg_id).strip()
+        for row in values[1:]:
+            row_tg_id = str(row[tg_col - 1]).strip() if tg_col - 1 < len(row) else ""
+            if row_tg_id != normalized_tg_id:
+                continue
+
+            morning_time = str(row[morning_col - 1]).strip() if morning_col and morning_col - 1 < len(row) else ""
+            evening_time = str(row[evening_col - 1]).strip() if evening_col and evening_col - 1 < len(row) else ""
+            timezone = str(row[timezone_col - 1]).strip() if timezone_col and timezone_col - 1 < len(row) else ""
+
+            return {
+                "morning_time": morning_time or default_morning_time,
+                "evening_time": evening_time or default_evening_time,
+                "timezone": timezone or default_timezone,
+            }
+
+        return {
+            "morning_time": default_morning_time,
+            "evening_time": default_evening_time,
+            "timezone": default_timezone,
+        }
+
+    def set_notification_settings(self, tg_id: int, morning_time: str, evening_time: str, timezone: str) -> bool:
+        values = self.sheets_client.get_all_values(self.roles_sheet_name)
+        if not values:
+            return False
+
+        headers = values[0]
+        tg_col = self._find_roles_column(headers, TG_ID_COLUMN)
+        if tg_col is None:
+            return False
+
+        morning_col = self._ensure_roles_column(NOTIFICATION_MORNING_TIME_COLUMN)
+        evening_col = self._ensure_roles_column(NOTIFICATION_EVENING_TIME_COLUMN)
+        timezone_col = self._ensure_roles_column(NOTIFICATION_TIMEZONE_COLUMN)
+
+        normalized_tg_id = str(tg_id).strip()
+        updated = False
+
+        for row_index, row in enumerate(values[1:], start=2):
+            row_tg_id = str(row[tg_col - 1]).strip() if tg_col - 1 < len(row) else ""
+            if row_tg_id != normalized_tg_id:
+                continue
+
+            self.sheets_client.update_cell(self.roles_sheet_name, row_index, morning_col, morning_time)
+            self.sheets_client.update_cell(self.roles_sheet_name, row_index, evening_col, evening_time)
+            self.sheets_client.update_cell(self.roles_sheet_name, row_index, timezone_col, timezone)
+            updated = True
+
+        return updated
 
     def get_user(self, tg_id: int):
         roles = self.get_user_roles(tg_id)
