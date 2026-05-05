@@ -121,6 +121,16 @@ EXIT_WITH_OPEN_VISIT_TEXT = (
 REPORT_TEXT_PROMPT = "Введите текст отчета одним сообщением."
 REPORT_EMPTY_TEXT = "Текст отчета не должен быть пустым."
 REPORT_SENT_TEXT = "Отчет отправлен. Статус задачи изменен на \"На рассмотрении\"."
+LEAD_ACCEPT_REPORT_COMMENT_QUESTION = "Нужен комментарий к принятому отчету?"
+LEAD_ACCEPT_REPORT_COMMENT_PROMPT = "Введите комментарий к отчету одним сообщением."
+LEAD_ACCEPT_REPORT_SUCCESS = "Отчет принят."
+LEAD_ACCEPT_REPORT_WITH_COMMENT_SUCCESS = "Отчет принят с комментарием."
+
+LEAD_REJECT_REPORT_EMPLOYEE_NOTIFICATION = (
+    "Отчет по задаче «{task_title}» отправлен на доработку.\n\n"
+    "Комментарий руководителя:\n{comment}\n\n"
+    "Задача снова доступна в списке задач."
+)
 
 SUPERUSER_REVOKE_ROLE_LIST_TEXT = "Список пользователей с ролями:"
 SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с назначенными ролями."

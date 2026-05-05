@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
+from conftest import FakeBot, FakeMessage, FakeState
 from roles import Role
+from services.manager_binding_service import ManagerBindRequest
+from services.reports_service import ReportRecord
+from services.task_request_service import TaskRequestRecord
 from services.tasks_service import TaskRecord
 
 
@@ -200,3 +204,173 @@ class FakeRoleRequestService:
     def deny_request(self, tg_id: int, role: Role) -> bool:
         self.deny_calls.append((tg_id, role))
         return self.deny_map.get((tg_id, role.value), False)
+
+
+
+class FakeLeadState(FakeState):
+    async def get_state(self):
+        return self.state
+
+
+class FakeLeadBot(FakeBot):
+    def __init__(self, chats: dict[int, object] | None = None):
+        super().__init__(chats)
+        self.deleted_messages: list[tuple[int, int]] = []
+        self.sent_messages: list[tuple[int, str]] = []
+
+    async def delete_message(self, chat_id: int, message_id: int) -> None:
+        self.deleted_messages.append((chat_id, message_id))
+
+    async def send_message(self, chat_id: int, text: str, **_kwargs: Any) -> None:
+        self.sent_messages.append((chat_id, text))
+
+
+class FakeLeadMessage(FakeMessage):
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.deleted = False
+
+    async def delete(self) -> None:
+        self.deleted = True
+
+
+class FakeLeadAuthService:
+    def __init__(self, *, team: list[int] | None = None, add_manager_result: bool = True):
+        self.team = team or []
+        self.add_manager_result = add_manager_result
+        self.add_manager_calls: list[tuple[int, Role, int]] = []
+
+    def get_team_members_for_manager(self, lead_id: int) -> list[int]:
+        return list(self.team)
+
+    def add_manager_for_user(self, employee_id: int, employee_role: Role, lead_id: int) -> bool:
+        self.add_manager_calls.append((employee_id, employee_role, lead_id))
+        return self.add_manager_result
+
+
+class FakeLeadVisitsService:
+    def __init__(self, *, start_result: bool = True, finish_result: bool = True):
+        self.start_result = start_result
+        self.finish_result = finish_result
+        self.start_calls: list[int] = []
+        self.finish_calls: list[int] = []
+
+    def start_workday(self, tg_id: int) -> bool:
+        self.start_calls.append(tg_id)
+        return self.start_result
+
+    def finish_workday(self, tg_id: int) -> bool:
+        self.finish_calls.append(tg_id)
+        return self.finish_result
+
+
+class FakeLeadTasksService:
+    def __init__(self, tasks=None, *, create_error: Exception | None = None):
+        self.tasks = {task.task_id: task for task in (tasks or [])}
+        self.create_error = create_error
+        self.created_tasks: list[tuple[Any, ...]] = []
+        self.deleted_task_ids: list[str] = []
+        self.status_updates: list[tuple[str, str]] = []
+
+    def list_tasks_created_by(self, author_id: int):
+        return [task for task in self.tasks.values() if task.author_id == author_id]
+
+    def get_task_by_id(self, task_id: str):
+        return self.tasks.get(task_id)
+
+    def create_task_created(self, *args: Any):
+        if self.create_error:
+            raise self.create_error
+        self.created_tasks.append(args)
+        return "created-task-id"
+
+    def delete_task_by_id(self, task_id: str):
+        self.deleted_task_ids.append(task_id)
+        self.tasks.pop(task_id, None)
+
+    def update_task_status(self, task_id: str, new_status: str):
+        self.status_updates.append((task_id, new_status))
+        task = self.tasks.get(task_id)
+        if task:
+            self.tasks[task_id] = replace(task, status=new_status)
+            return self.tasks[task_id]
+        return None
+
+
+class FakeLeadReportsService:
+    def __init__(self, reports=None):
+        self.reports = {report.task_id: report for report in (reports or [])}
+        self.deleted_report_task_ids: list[str] = []
+        self.feedback_updates: list[tuple[str, str]] = []
+
+    def get_all_reports(self):
+        return list(self.reports.values())
+
+    def get_report_by_task_id(self, task_id: str):
+        return self.reports.get(task_id)
+
+    def delete_report_by_task_id(self, task_id: str):
+        self.deleted_report_task_ids.append(task_id)
+        self.reports.pop(task_id, None)
+
+    def update_manager_feedback(self, task_id: str, comment: str):
+        self.feedback_updates.append((task_id, comment))
+
+
+class FakeLeadAcceptedTasksService:
+    def __init__(self):
+        self.accepted: list[tuple[ReportRecord, Any, str]] = []
+
+    def create_from_report(self, report: ReportRecord, task: Any, comment: str):
+        self.accepted.append((report, task, comment))
+
+
+class FakeLeadTaskRequestService:
+    def __init__(self, requests=None):
+        self.requests = {request.callback_token: request for request in (requests or [])}
+        self.deleted: list[str] = []
+        self.deleted_related: list[str] = []
+
+    def list_requests_for_lead(self, lead_id: int):
+        return [req for req in self.requests.values() if req.lead_id == lead_id]
+
+    def get_request_for_lead_by_token(self, token: str, lead_id: int):
+        req = self.requests.get(token)
+        return req if req and req.lead_id == lead_id else None
+
+    def delete_request(self, request: TaskRequestRecord):
+        self.deleted.append(request.callback_token)
+        self.requests.pop(request.callback_token, None)
+
+    def delete_related_requests(self, request: TaskRequestRecord):
+        self.deleted_related.append(request.callback_token)
+        self.requests.pop(request.callback_token, None)
+
+
+class FakeLeadManagerBindingService:
+    def __init__(self, requests=None):
+        self.requests = {request.request_id: request for request in (requests or [])}
+        self.deleted: list[str] = []
+
+    def list_requests_for_lead(self, lead_id: int):
+        return [req for req in self.requests.values() if req.lead_id == lead_id]
+
+    def get_request_by_id(self, request_id: str, lead_id: int):
+        req = self.requests.get(request_id)
+        return req if req and req.lead_id == lead_id else None
+
+    def delete_request(self, request_id: str):
+        self.deleted.append(request_id)
+        self.requests.pop(request_id, None)
+
+
+def make_report(task_id: str = "task-1", *, employee_id: int = 100, text: str = "Готово") -> ReportRecord:
+    return ReportRecord(2, f"report-{task_id}", task_id, employee_id, text, "2026-01-02", {})
+
+
+def make_request(token: str = "offer-1", *, lead_id: int = 200, author_id: int = 100) -> TaskRequestRecord:
+    return TaskRequestRecord(2, token, "Предложение", "Описание", lead_id, author_id, "new", "2026-01-01")
+
+
+def make_bind_request(request_id: str = "bind-1", *, lead_id: int = 200, employee_id: int = 100) -> ManagerBindRequest:
+    return ManagerBindRequest(request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01")

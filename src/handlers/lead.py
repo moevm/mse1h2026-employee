@@ -47,6 +47,10 @@ from constants.texts import (
     LEAD_REJECT_REPORT_PROMPT,
     LEAD_REJECT_REPORT_SUCCESS,
     LEAD_REJECT_COMMENT_EMPTY,
+    LEAD_ACCEPT_REPORT_COMMENT_QUESTION,
+    LEAD_ACCEPT_REPORT_COMMENT_PROMPT,
+    LEAD_ACCEPT_REPORT_SUCCESS,
+    LEAD_ACCEPT_REPORT_WITH_COMMENT_SUCCESS,
 )
 from filters.active_role import ActiveRoleFilter
 from handlers.common import resolve_user_label
@@ -703,7 +707,7 @@ def setup_lead_router(
                 accept_message_id=callback.message.message_id,
             )
             await callback.message.answer(
-                "Нужен комментарий к принятому отчету?",
+                LEAD_ACCEPT_REPORT_COMMENT_QUESTION,
                 reply_markup=get_lead_accept_comment_choice_keyboard(task_id),
             )
             await callback.answer()
@@ -732,13 +736,13 @@ def setup_lead_router(
 
         task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
         if task is None:
-            await callback.message.answer("Задача не найдена.")
+            await callback.message.answer(TASK_NOT_FOUND_TEXT)
             await callback.answer()
             return
 
         report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
         if report is None:
-            await callback.message.answer("Отчет не найден.")
+            await callback.message.answer(LEAD_REPORT_NOT_FOUND_TEXT)
             await callback.answer()
             return
 
@@ -770,7 +774,7 @@ def setup_lead_router(
                 pass
 
         await state.clear()
-        await callback.message.answer("Отчет принят.")
+        await callback.message.answer(LEAD_ACCEPT_REPORT_SUCCESS)
         await callback.answer()
 
     @router.callback_query(F.data.startswith("lead_report_comment:yes:"))
@@ -790,7 +794,7 @@ def setup_lead_router(
         except Exception:
             pass
 
-        await callback.message.answer("Введите комментарий к отчету одним сообщением.")
+        await callback.message.answer(LEAD_ACCEPT_REPORT_COMMENT_PROMPT)
         await callback.answer()
 
     @router.message(LeadStates.waiting_accept_comment, F.text)
@@ -802,19 +806,19 @@ def setup_lead_router(
         accept_message_id = data.get("accept_message_id")
 
         if not comment:
-            await message.answer("Комментарий пустой. Введите комментарий еще раз.")
+            await message.answer(LEAD_REJECT_COMMENT_EMPTY)
             return
 
         task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
         if task is None:
             await state.clear()
-            await message.answer("Задача не найдена.")
+            await message.answer(TASK_NOT_FOUND_TEXT)
             return
 
         report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
         if report is None:
             await state.clear()
-            await message.answer("Отчет не найден.")
+            await message.answer(LEAD_REPORT_NOT_FOUND_TEXT)
             return
 
         await asyncio.to_thread(
@@ -836,7 +840,7 @@ def setup_lead_router(
                 pass
 
         await state.clear()
-        await message.answer("Отчет принят с комментарием.")
+        await message.answer(LEAD_ACCEPT_REPORT_WITH_COMMENT_SUCCESS)
 
     @router.message(LeadStates.waiting_reject_comment, F.text)
     async def lead_report_reject_finish(message: Message, state: FSMContext):
@@ -856,13 +860,13 @@ def setup_lead_router(
         task = await asyncio.to_thread(tasks_service.get_task_by_id, task_id)
         if task is None:
             await state.clear()
-            await message.answer("Задача не найдена.", reply_markup=get_lead_reports_keyboard())
+            await message.answer(TASK_NOT_FOUND_TEXT, reply_markup=get_lead_reports_keyboard())
             return
 
         report = await asyncio.to_thread(reports_service.get_report_by_task_id, task_id)
         if report is None:
             await state.clear()
-            await message.answer("Отчет не найден.", reply_markup=get_lead_reports_keyboard())
+            await message.answer(LEAD_REPORT_NOT_FOUND_TEXT, reply_markup=get_lead_reports_keyboard())
             return
 
         await asyncio.to_thread(
