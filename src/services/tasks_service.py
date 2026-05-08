@@ -168,8 +168,13 @@ class TasksService:
         tasks = [task for task in self.get_all_tasks() if task.author_id == author_id]
         return list(reversed(tasks))
 
-    def list_tasks_assigned_to(self, employee_id: int) -> list[TaskRecord]:
+    def list_tasks_assigned_to(self, employee_id: int, statuses: set[str] | None = None) -> list[TaskRecord]:
         tasks = [task for task in self.get_all_tasks() if task.employee_id == employee_id]
+
+        if statuses is not None:
+            allowed = {s.strip().lower() for s in statuses}
+            tasks = [t for t in tasks if (t.status or "").strip().lower() in allowed]
+
         return list(reversed(tasks))
 
     def get_task_by_id(self, task_id: str) -> TaskRecord | None:
