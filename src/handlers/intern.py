@@ -30,6 +30,7 @@ from constants.texts import (
     BIND_MANAGER_REQUEST_ALREADY_EXISTS_TEXT,
     BIND_MANAGER_REQUEST_SENT_TEXT,
     BIND_MANAGER_SELECT_TEXT,
+    REPORT_COMMENT_EMPTY_TEXT,
 )
 from filters.active_role import ActiveRoleFilter
 from services.tasks_service import format_task_for_assignee
@@ -226,8 +227,8 @@ def setup_intern_router(
                     reports_service.get_manager_feedback_by_task_id,
                     task.task_id,
                 )
-                if manager_feedback:
-                    task_text += f"\n\n<b>Комментарий руководителя:</b>\n{escape(manager_feedback)}"
+                #if manager_feedback:
+                #   task_text += f"\n\n<b>Комментарий руководителя:</b>\n{escape(manager_feedback)}"
 
             await message.answer(
                 task_text,
@@ -298,7 +299,37 @@ def setup_intern_router(
 
     @router.message(F.text == Buttons.INTERN_REPORT_COMMENT)
     async def report_comment(message: Message):
-        await message.answer(REPORT_COMMENT_TEXT, reply_markup=get_intern_menu_keyboard())
+        tasks = await asyncio.to_thread(
+            tasks_service.list_tasks_assigned_to,
+            message.from_user.id,
+            {"cancelled"},
+        )
+
+        items = []
+        for task in tasks:
+            feedback = await asyncio.to_thread(
+                reports_service.get_manager_feedback_by_task_id,
+                task.task_id,
+            )
+            feedback = feedback.strip()
+            if not feedback:
+                continue
+
+            title = escape(task.title) if task.title else "—"
+            items.append(
+                f"Название: {title}\n\n"
+                f"Комментарий руководителя:\n{escape(feedback)}"
+            )
+
+        if not items:
+            await message.answer(REPORT_COMMENT_EMPTY_TEXT, reply_markup=get_intern_menu_keyboard())
+            return
+
+        await message.answer(
+            REPORT_COMMENT_TEXT + "\n\n" + "\n\n".join(items),
+            reply_markup=get_intern_menu_keyboard(),
+            parse_mode="HTML",
+        )
 
     @router.message(TaskReportStates.waiting_report_text, F.text == Buttons.CANCEL)
     async def report_cancel(message: Message, state: FSMContext):
