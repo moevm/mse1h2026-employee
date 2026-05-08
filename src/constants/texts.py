@@ -35,7 +35,9 @@ FINISH_WORK_TEXT = "Завершение рабочего дня пока реа
 CREATE_MY_TASK_TEXT = "Создание личной задачи пока реализовано как заглушка."
 MY_TASKS_TEXT = "Список задач пока реализован как заглушка."
 COMPLETE_TASK_TEXT = "Отправка отчета пока реализована как заглушка."
-REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
+
+REPORT_COMMENT_TEXT = "Причины отказа в принятии отчета:"
+REPORT_COMMENT_EMPTY_TEXT = "Нет отклоненных отчетов с комментариями."
 
 LEAD_TASK_PROPOSALS_LIST_TEXT = "Предложенные задачи:"
 LEAD_TASK_PROPOSALS_EMPTY_TEXT = "Нет предложенных задач."
