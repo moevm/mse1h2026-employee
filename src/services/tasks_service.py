@@ -164,6 +164,38 @@ class TasksService:
         )
         return task_id
 
+
+    @staticmethod
+    def _date_part(value: str) -> str:
+        value = str(value).strip()
+        match = re.search(r"\d{4}-\d{2}-\d{2}", value)
+        if match:
+            return match.group(0)
+        return value
+
+    @staticmethod
+    def _unique_titles(tasks: list[TaskRecord]) -> list[str]:
+        titles: list[str] = []
+        for task in tasks:
+            title = (task.title or "").strip()
+            if title and title not in titles:
+                titles.append(title)
+        return titles
+
+    def list_completed_tasks_for_date(self, employee_id: int, report_date: str) -> list[TaskRecord]:
+        completed_statuses = {"finished", "on consideration"}
+        tasks = [
+            task
+            for task in self.get_all_tasks()
+            if task.employee_id == employee_id
+            and (task.status or "").strip().lower() in completed_statuses
+            and self._date_part(task.updated_at) == report_date
+        ]
+        return list(reversed(tasks))
+
+    def list_in_process_tasks(self, employee_id: int) -> list[TaskRecord]:
+        return self.list_tasks_assigned_to(employee_id, {"in process"})
+
     def list_tasks_created_by(self, author_id: int) -> list[TaskRecord]:
         tasks = [task for task in self.get_all_tasks() if task.author_id == author_id]
         return list(reversed(tasks))
