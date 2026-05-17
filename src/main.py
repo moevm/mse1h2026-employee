@@ -21,6 +21,7 @@ from services.task_request_service import TaskRequestService
 from services.tasks_service import TasksService
 from services.visits_service import VisitsService
 from services.reports_service import ReportsService
+from services.daily_reports_service import DailyReportsService
 from services.accepted_tasks_service import AcceptedTasksService
 from services.manager_binding_service import ManagerBindingService
 
@@ -79,6 +80,12 @@ async def main():
         reports_sheet_name=config.sheets.reports_sheet_name,
     )
 
+    daily_reports_service = DailyReportsService(
+        sheets_client=sheets_client,
+        sheet_name=config.sheets.daily_reports_sheet_name,
+        timezone=config.reminders.timezone,
+    )
+
     accepted_tasks_service = AcceptedTasksService(
         sheets_client=sheets_client,
         accepted_tasks_sheet_name=config.sheets.accepted_tasks_sheet_name,
@@ -100,9 +107,9 @@ async def main():
         default_timezone=config.reminders.timezone,
     ))
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
-    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service, manager_binding_service))
-    dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service))
-    dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service))
+    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service, manager_binding_service, daily_reports_service))
+    dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
+    dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
 
     await reminder_service.start(bot)
     try:
