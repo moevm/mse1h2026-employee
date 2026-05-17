@@ -179,3 +179,15 @@ NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
     "Некорректный порядок времени. "
     "Время начала дня должно быть раньше времени окончания дня."
 )
+
+
+DAILY_REPORT_WORK_DONE_PROMPT = "Какая работа была проделана?"
+DAILY_REPORT_PROBLEMS_PROMPT = "С какими проблемами пришлось столкнуться? Если проблем не было — отправьте '-'."
+DAILY_REPORT_EMPTY_TEXT = "Ответ не должен быть пустым."
+DAILY_REPORT_SAVED_TEXT = "Ежедневный отчет сохранен."
+DAILY_REPORT_UPDATED_TEXT = "Ежедневный отчет за сегодня обновлен."
+
+LEAD_DAILY_REPORTS_SELECT_DATE_TEXT = "Выберите дату ежедневных отчетов."
+LEAD_DAILY_REPORTS_EMPTY_TEXT = "За выбранную дату ежедневных отчетов по вашей команде нет."
+LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT = "Можно смотреть ежедневные отчеты только за период от сегодняшнего дня до года назад."
+LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT = "Ежедневные отчеты за {date}:"
