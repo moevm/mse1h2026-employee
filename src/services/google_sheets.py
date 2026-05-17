@@ -3,6 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 import gspread
+try:
+    from gspread.exceptions import WorksheetNotFound
+except (ImportError, ModuleNotFoundError):
+    # Test stubs may provide `gspread` as a simple module without the
+    # `gspread.exceptions` submodule. In production, the real exception
+    # class is imported and used.
+    class WorksheetNotFound(Exception):
+        pass
 from google.oauth2.service_account import Credentials
 
 
@@ -23,6 +31,38 @@ class GoogleSheetsClient:
 
     def get_worksheet(self, sheet_name: str):
         return self.spreadsheet.worksheet(sheet_name)
+
+    def get_or_create_worksheet(self, sheet_name: str, rows: int = 1000, cols: int = 20):
+        try:
+            return self.spreadsheet.worksheet(sheet_name)
+        except WorksheetNotFound:
+            return self.spreadsheet.add_worksheet(
+                title=sheet_name,
+                rows=rows,
+                cols=cols,
+            )
+
+    def ensure_headers(self, sheet_name: str, headers: list[str]):
+        worksheet = self.get_or_create_worksheet(
+            sheet_name,
+            rows=1000,
+            cols=max(len(headers), 20),
+        )
+        existing_headers = [self._normalize(value) for value in worksheet.row_values(1)]
+
+        if not existing_headers or not any(existing_headers):
+            for col_index, header in enumerate(headers, start=1):
+                worksheet.update_cell(1, col_index, header)
+            return worksheet
+
+        next_col = len(existing_headers) + 1
+        for header in headers:
+            if self._normalize(header) not in existing_headers:
+                worksheet.update_cell(1, next_col, header)
+                existing_headers.append(self._normalize(header))
+                next_col += 1
+
+        return worksheet
 
     @staticmethod
     def _normalize(value: Any):
