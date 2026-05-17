@@ -32,6 +32,11 @@ from constants.texts import (
     BIND_MANAGER_REQUEST_SENT_TEXT,
     BIND_MANAGER_SELECT_TEXT,
     REPORT_COMMENT_EMPTY_TEXT,
+    DAILY_REPORT_EMPTY_TEXT,
+    DAILY_REPORT_PROBLEMS_PROMPT,
+    DAILY_REPORT_SAVED_TEXT,
+    DAILY_REPORT_UPDATED_TEXT,
+    DAILY_REPORT_WORK_DONE_PROMPT,
 )
 from filters.active_role import ActiveRoleFilter
 from services.tasks_service import format_task_for_assignee
@@ -50,10 +55,25 @@ from services.tasks_service import TasksService
 from services.visits_service import VisitsService
 from services.reports_service import ReportsService
 from services.manager_binding_service import ManagerBindingService
+from services.accepted_tasks_service import AcceptedTasksService
+from services.daily_reports_service import DailyReportsService
 from states.task_request import TaskRequestStates
 from states.task_report import TaskReportStates
 from states.manager_binding import ManagerBindingStates
+from states.daily_report import DailyReportStates
 
+
+def _unique_non_empty(values: list[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        normalized = str(value).strip()
+        if normalized and normalized not in result:
+            result.append(normalized)
+    return result
+
+
+def _titles_from_tasks(tasks) -> list[str]:
+    return _unique_non_empty([(task.title or "") for task in tasks])
 
 def setup_employee_router(
     auth_service: AuthService,
@@ -61,7 +81,31 @@ def setup_employee_router(
     tasks_service: TasksService,
     reports_service: ReportsService,
     manager_binding_service: ManagerBindingService,
+    accepted_tasks_service: AcceptedTasksService | None = None,
+    daily_reports_service: DailyReportsService | None = None,
 ):
+    if accepted_tasks_service is None:
+        class _EmptyAcceptedTasksService:
+            def list_task_titles_for_employee_on_date(self, *_args, **_kwargs):
+                return []
+
+        accepted_tasks_service = _EmptyAcceptedTasksService()
+
+    if daily_reports_service is None:
+        from datetime import date as _date
+
+        class _FallbackDailyReportsService:
+            def today_str(self):
+                return _date.today().isoformat()
+
+            def create_or_update_report(self, *_args, **_kwargs):
+                return "", False
+
+            def list_reports_for_date(self, *_args, **_kwargs):
+                return []
+
+        daily_reports_service = _FallbackDailyReportsService()
+
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.EMPLOYEE))
     router.callback_query.filter(ActiveRoleFilter(auth_service, Role.EMPLOYEE))
@@ -210,6 +254,84 @@ def setup_employee_router(
         else:
             await message.answer(BIND_MANAGER_REQUEST_SENT_TEXT, reply_markup=get_employee_menu_keyboard())
 
+
+    @router.message(F.text == Buttons.EMPLOYEE_DAILY_REPORT)
+    async def daily_report_start(message: Message, state: FSMContext):
+        await state.clear()
+        await state.set_state(DailyReportStates.waiting_work_done)
+        await message.answer(
+            DAILY_REPORT_WORK_DONE_PROMPT,
+            reply_markup=get_report_cancel_keyboard(),
+        )
+
+    @router.message(DailyReportStates.waiting_work_done, F.text == Buttons.CANCEL)
+    @router.message(DailyReportStates.waiting_problems, F.text == Buttons.CANCEL)
+    async def daily_report_cancel(message: Message, state: FSMContext):
+        await state.clear()
+        await message.answer(ACTION_CANCELLED_TEXT, reply_markup=get_employee_menu_keyboard())
+
+    @router.message(DailyReportStates.waiting_work_done, F.text)
+    async def daily_report_work_done(message: Message, state: FSMContext):
+        work_done = message.text.strip()
+        if not work_done:
+            await message.answer(DAILY_REPORT_EMPTY_TEXT, reply_markup=get_report_cancel_keyboard())
+            return
+
+        await state.update_data(daily_work_done=work_done)
+        await state.set_state(DailyReportStates.waiting_problems)
+        await message.answer(
+            DAILY_REPORT_PROBLEMS_PROMPT,
+            reply_markup=get_report_cancel_keyboard(),
+        )
+
+    @router.message(DailyReportStates.waiting_problems, F.text)
+    async def daily_report_problems(message: Message, state: FSMContext):
+        problems = message.text.strip()
+        if not problems:
+            await message.answer(DAILY_REPORT_EMPTY_TEXT, reply_markup=get_report_cancel_keyboard())
+            return
+
+        if problems == "-":
+            problems = ""
+
+        data = await state.get_data()
+        work_done = data.get("daily_work_done", "")
+        report_date = await asyncio.to_thread(daily_reports_service.today_str)
+
+        completed_tasks = await asyncio.to_thread(
+            tasks_service.list_completed_tasks_for_date,
+            message.from_user.id,
+            report_date,
+        )
+        accepted_task_titles = await asyncio.to_thread(
+            accepted_tasks_service.list_task_titles_for_employee_on_date,
+            message.from_user.id,
+            report_date,
+        )
+        completed_titles = _unique_non_empty(_titles_from_tasks(completed_tasks) + accepted_task_titles)
+
+        in_process_tasks = await asyncio.to_thread(
+            tasks_service.list_in_process_tasks,
+            message.from_user.id,
+        )
+        in_process_titles = _titles_from_tasks(in_process_tasks)
+
+        _, was_updated = await asyncio.to_thread(
+            daily_reports_service.create_or_update_report,
+            message.from_user.id,
+            report_date,
+            work_done,
+            problems,
+            completed_titles,
+            in_process_titles,
+        )
+
+        await state.clear()
+        await message.answer(
+            DAILY_REPORT_UPDATED_TEXT if was_updated else DAILY_REPORT_SAVED_TEXT,
+            reply_markup=get_employee_menu_keyboard(),
+        )
+
     @router.message(F.text == Buttons.EMPLOYEE_TASKS_LIST)
     async def my_task_list(message: Message):
         tasks = await asyncio.to_thread(tasks_service.list_tasks_assigned_to, message.from_user.id)
@@ -239,8 +361,8 @@ def setup_employee_router(
                     reports_service.get_manager_feedback_by_task_id,
                     task.task_id,
                 )
-                #if manager_feedback:
-                #    task_text += f"\n\n<b>Комментарий руководителя:</b>\n{escape(manager_feedback)}"
+                if manager_feedback:
+                    task_text += f"\n\n<b>Комментарий руководителя:</b>\n{escape(manager_feedback)}"
 
             await message.answer(
                 task_text,
@@ -314,8 +436,11 @@ def setup_employee_router(
         tasks = await asyncio.to_thread(
             tasks_service.list_tasks_assigned_to,
             message.from_user.id,
-            {"cancelled"},
         )
+        tasks = [
+            task for task in tasks
+            if (task.status or "").strip().lower() == "cancelled"
+        ]
 
         items = []
         for task in tasks:
@@ -334,7 +459,7 @@ def setup_employee_router(
             )
 
         if not items:
-            await message.answer(REPORT_COMMENT_EMPTY_TEXT, reply_markup=get_employee_menu_keyboard())
+            await message.answer(REPORT_COMMENT_TEXT, reply_markup=get_employee_menu_keyboard())
             return
 
         await message.answer(

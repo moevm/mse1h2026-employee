@@ -38,7 +38,7 @@ def get_lead_main_keyboard():
     builder.button(text=Buttons.LEAD_BIND_REQUESTS)
     builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 2, 1, 1)
+    builder.adjust(2, 2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -70,9 +70,10 @@ def get_lead_tasks_keyboard():
 def get_lead_reports_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.LEAD_REPORTS_LIST)
+    builder.button(text=Buttons.LEAD_DAILY_REPORTS)
     builder.button(text=Buttons.MAIN_MENU)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(1, 2)
+    builder.adjust(1, 1, 2)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -108,11 +109,12 @@ def get_employee_menu_keyboard():
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.EMPLOYEE_CREATE_TASK)
     builder.button(text=Buttons.EMPLOYEE_TASKS_LIST)
+    builder.button(text=Buttons.EMPLOYEE_DAILY_REPORT)
     builder.button(text=Buttons.EMPLOYEE_REPORT_COMMENT)
     builder.button(text=Buttons.EMPLOYEE_BIND_MANAGER)
     builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 2, 1, 1)
+    builder.adjust(2, 2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -121,11 +123,12 @@ def get_intern_menu_keyboard():
     builder.button(text=Buttons.START_WORK)
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.INTERN_TASKS_LIST)
+    builder.button(text=Buttons.INTERN_DAILY_REPORT)
     builder.button(text=Buttons.INTERN_REPORT_COMMENT)
     builder.button(text=Buttons.INTERN_BIND_MANAGER)
     builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 2, 1)
+    builder.adjust(2, 2, 2, 2)
     return builder.as_markup(resize_keyboard=True)
 
 
