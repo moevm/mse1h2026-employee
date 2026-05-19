@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import date
+from datetime import date, timedelta
 from html import escape
 
 from aiogram import F, Router
@@ -27,6 +27,10 @@ from constants.texts import (
     LEAD_REPORTS_EMPTY_TEXT,
     LEAD_REPORTS_LIST_TEXT,
     LEAD_REPORTS_TEXT,
+    LEAD_DAILY_REPORTS_EMPTY_TEXT,
+    LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT,
+    LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT,
+    LEAD_DAILY_REPORTS_SELECT_DATE_TEXT,
     LEAD_TASKS_EMPTY_TEXT,
     LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT,
     LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS,
@@ -54,7 +58,7 @@ from constants.texts import (
 )
 from filters.active_role import ActiveRoleFilter
 from handlers.common import resolve_user_label
-from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_today
+from keyboards.inline_calendar import CAL_PREFIX, build_calendar, calendar_for_today, calendar_for_range
 from keyboards.role_menus import (
     LEAD_REPORT_CALLBACK_PREFIX,
     TASK_PROPOSAL_CALLBACK_PREFIX,
@@ -73,6 +77,7 @@ from roles import Role
 from services.accepted_tasks_service import AcceptedTasksService
 from services.auth_service import AuthService
 from services.reports_service import ReportRecord, ReportsService
+from services.daily_reports_service import DailyReportRecord, DailyReportsService
 from services.manager_binding_service import ManagerBindingService, ManagerBindRequest
 from services.task_request_service import TaskRequestRecord, TaskRequestService
 from services.tasks_service import TaskRecord, TasksService, format_task_for_lead
@@ -100,6 +105,35 @@ def format_report_details_for_lead(task: TaskRecord, employee_label: str, report
         f"<b>Тег выполнившего сотрудника:</b> {safe_employee_label}\n"
         f"<b>Содержимое отчета:</b>\n{safe_text}"
     )
+
+
+def _safe_multiline(value: str) -> str:
+    value = str(value or "").strip()
+    return escape(value) if value else "—"
+
+
+def format_daily_report_for_lead(report: DailyReportRecord, employee_label: str) -> str:
+    safe_employee_label = escape(employee_label) if employee_label else "—"
+    safe_date = escape(report.report_date) if report.report_date else "—"
+    work_done = _safe_multiline(report.work_done)
+    problems = _safe_multiline(report.problems)
+    completed_titles = _safe_multiline(report.completed_tasks_titles)
+    in_process_titles = _safe_multiline(report.in_process_tasks_titles)
+
+    return (
+        f"<b>Сотрудник:</b> {safe_employee_label}\n"
+        f"<b>Дата:</b> {safe_date}\n\n"
+        f"<b>Какая работа была проделана:</b>\n{work_done}\n\n"
+        f"<b>С какими проблемами пришлось столкнуться:</b>\n{problems}\n\n"
+        f"<b>Выполненныx задач за день:</b> {report.completed_tasks_count}\n"
+        f"{completed_titles}\n\n"
+        f"<b>Задач в процессе:</b> {report.in_process_tasks_count}\n"
+        f"{in_process_titles}"
+    )
+
+
+def _daily_report_date_bounds(today: date) -> tuple[date, date]:
+    return today - timedelta(days=365), today
 
 
 def format_task_proposal_for_lead(request: TaskRequestRecord, employee_label: str) -> str:
@@ -136,7 +170,20 @@ def setup_lead_router(
     accepted_tasks_service: AcceptedTasksService,
     task_request_service: TaskRequestService,
     manager_binding_service: ManagerBindingService,
+    daily_reports_service: DailyReportsService | None = None,
 ):
+    if daily_reports_service is None:
+        from datetime import date as _date
+
+        class _FallbackDailyReportsService:
+            def today_str(self):
+                return _date.today().isoformat()
+
+            def list_reports_for_date(self, *_args, **_kwargs):
+                return []
+
+        daily_reports_service = _FallbackDailyReportsService()
+
     router = Router()
     router.message.filter(ActiveRoleFilter(auth_service, Role.LEAD))
     router.callback_query.filter(ActiveRoleFilter(auth_service, Role.LEAD))
@@ -264,6 +311,90 @@ def setup_lead_router(
     async def lead_reports_menu(message: Message, state: FSMContext):
         await state.clear()
         await message.answer(LEAD_REPORTS_TEXT, reply_markup=get_lead_reports_keyboard())
+
+
+    @router.message(F.text == Buttons.LEAD_DAILY_REPORTS)
+    async def lead_daily_reports_start(message: Message, state: FSMContext):
+        await state.clear()
+        await state.set_state(LeadStates.waiting_daily_report_date)
+        await state.update_data(return_to="reports")
+
+        today = date.fromisoformat(await asyncio.to_thread(daily_reports_service.today_str))
+        min_date, max_date = _daily_report_date_bounds(today)
+
+        await message.answer(
+            LEAD_DAILY_REPORTS_SELECT_DATE_TEXT,
+            reply_markup=calendar_for_range(min_date, max_date, today),
+        )
+
+    @router.callback_query(LeadStates.waiting_daily_report_date, F.data.startswith(f"{CAL_PREFIX}:"))
+    async def lead_daily_reports_calendar(call: CallbackQuery, state: FSMContext):
+        parts = call.data.split(":")
+        action = parts[1]
+
+        today = date.fromisoformat(await asyncio.to_thread(daily_reports_service.today_str))
+        min_date, max_date = _daily_report_date_bounds(today)
+
+        if action == "ignore":
+            await call.answer()
+            return
+
+        if action == "cancel":
+            await state.clear()
+            await call.message.edit_text(ACTION_CANCELLED_TEXT)
+            await call.message.answer(LEAD_REPORTS_TEXT, reply_markup=get_lead_reports_keyboard())
+            await call.answer()
+            return
+
+        if action == "nav":
+            year = int(parts[2])
+            month = int(parts[3])
+            await call.message.edit_text(
+                LEAD_DAILY_REPORTS_SELECT_DATE_TEXT,
+                reply_markup=build_calendar(year, month, min_date=min_date, max_date=max_date),
+            )
+            await call.answer()
+            return
+
+        if action != "pick":
+            await call.answer()
+            return
+
+        selected_date = date(int(parts[2]), int(parts[3]), int(parts[4]))
+        if selected_date < min_date or selected_date > max_date:
+            await call.answer(LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT, show_alert=True)
+            return
+
+        report_date = selected_date.strftime("%Y-%m-%d")
+        employee_ids = await asyncio.to_thread(
+            auth_service.get_team_members_for_manager,
+            call.from_user.id,
+        )
+        daily_reports = await asyncio.to_thread(
+            daily_reports_service.list_reports_for_date,
+            report_date,
+            employee_ids,
+        )
+
+        await state.clear()
+        await call.message.edit_text(LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT.format(date=report_date))
+
+        if not daily_reports:
+            await call.message.answer(
+                LEAD_DAILY_REPORTS_EMPTY_TEXT,
+                reply_markup=get_lead_reports_keyboard(),
+            )
+            await call.answer()
+            return
+
+        for report in daily_reports:
+            employee_label = await resolve_user_label(call.bot, report.employee_id)
+            await call.message.answer(
+                format_daily_report_for_lead(report, employee_label),
+                parse_mode="HTML",
+            )
+
+        await call.answer()
 
     @router.message(F.text == Buttons.LEAD_WEEKLY_REPORT)
     async def lead_weekly_start(message: Message, state: FSMContext):

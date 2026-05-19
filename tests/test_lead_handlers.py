@@ -17,6 +17,11 @@ from constants.texts import (
     LEAD_REPORT_NOT_FOUND_TEXT,
     LEAD_REPORTS_EMPTY_TEXT,
     LEAD_REPORTS_LIST_TEXT,
+    LEAD_REPORTS_TEXT,
+    LEAD_DAILY_REPORTS_EMPTY_TEXT,
+    LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT,
+    LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT,
+    LEAD_DAILY_REPORTS_SELECT_DATE_TEXT,
     LEAD_TASK_PROPOSAL_ACCEPT_DEADLINE_PROMPT,
     LEAD_TASK_PROPOSAL_ACCEPT_SUCCESS,
     LEAD_TASK_PROPOSAL_REJECT_SUCCESS,
@@ -39,6 +44,7 @@ from handlers.lead import (
     format_manager_bind_request_for_lead,
     format_report_details_for_lead,
     format_report_summary_for_lead,
+    format_daily_report_for_lead,
     format_task_proposal_for_lead,
     setup_lead_router,
 )
@@ -49,6 +55,7 @@ from keyboards.role_menus import (
     TASK_PROPOSAL_CALLBACK_PREFIX,
 )
 from roles import Role
+from states.lead import LeadStates
 from helpers import (
     FakeLeadAcceptedTasksService,
     FakeLeadAuthService,
@@ -59,11 +66,13 @@ from helpers import (
     FakeLeadState,
     FakeLeadTaskRequestService,
     FakeLeadTasksService,
+    FakeDailyReportsService,
     FakeLeadVisitsService,
     make_bind_request,
     make_report,
     make_request,
     make_task,
+    make_daily_report,
 )
 
 
@@ -71,7 +80,7 @@ def run(coro):
     return asyncio.run(coro)
 
 
-def build_router(*, auth=None, visits=None, tasks=None, reports=None, accepted=None, task_requests=None, bindings=None):
+def build_router(*, auth=None, visits=None, tasks=None, reports=None, accepted=None, task_requests=None, bindings=None, daily_reports=None):
     return setup_lead_router(
         auth or FakeLeadAuthService(),
         tasks or FakeLeadTasksService(),
@@ -80,6 +89,7 @@ def build_router(*, auth=None, visits=None, tasks=None, reports=None, accepted=N
         accepted or FakeLeadAcceptedTasksService(),
         task_requests or FakeLeadTaskRequestService(),
         bindings or FakeLeadManagerBindingService(),
+        daily_reports_service=daily_reports or FakeDailyReportsService(),
     )
 
 
@@ -92,8 +102,14 @@ def test_lead_formatters_escape_html_and_fill_empty_values():
     assert "&lt;T&gt;" in format_report_summary_for_lead(task, "@dev&qa")
     assert "@dev&amp;qa" in format_report_summary_for_lead(task, "@dev&qa")
     assert "&lt;ok&gt;" in format_report_details_for_lead(task, "@dev", report)
+    daily_report = make_daily_report(work_done="<работа>", problems="", completed_tasks_titles="<готово>")
+
     assert "Предложение" in format_task_proposal_for_lead(request, "@employee")
     assert "Запрос на привязку" in format_manager_bind_request_for_lead(bind, "@employee")
+    daily_report_text = format_daily_report_for_lead(daily_report, "@dev&qa")
+    assert "@dev&amp;qa" in daily_report_text
+    assert "&lt;работа&gt;" in daily_report_text
+    assert "&lt;готово&gt;" in daily_report_text
 
 
 def test_start_and_finish_work_success_and_failure_texts():
@@ -390,3 +406,88 @@ def test_reject_report_validates_comment_and_updates_feedback_status_and_notifie
     assert bot.deleted_messages == [(500, 10)]
     assert bot.sent_messages and "Исправить" in bot.sent_messages[0][1]
     assert message.answers[-1]["text"] == LEAD_REJECT_REPORT_SUCCESS
+
+def test_lead_daily_reports_start_sets_state_and_shows_limited_calendar():
+    daily_reports = FakeDailyReportsService(today="2026-05-17")
+    router = build_router(daily_reports=daily_reports)
+    state = FakeLeadState({"old": "data"})
+    message = FakeMessage(text=Buttons.LEAD_DAILY_REPORTS, user_id=200)
+
+    run(get_handler(router, "lead_daily_reports_start")(message, state))
+
+    assert state.clear_count == 1
+    assert state.state is LeadStates.waiting_daily_report_date
+    assert state.data["return_to"] == "reports"
+    assert message.answers[0]["text"] == LEAD_DAILY_REPORTS_SELECT_DATE_TEXT
+    keyboard = message.answers[0]["reply_markup"]
+    callback_values = [button.callback_data for row in keyboard.inline_keyboard for button in row]
+    assert f"{CAL_PREFIX}:pick:2026:5:17" in callback_values
+    assert f"{CAL_PREFIX}:pick:2025:5:16" not in callback_values
+
+
+def test_lead_daily_reports_pick_date_renders_team_reports_without_reopening_reports_menu():
+    report = make_daily_report(
+        employee_id=100,
+        report_date="2026-05-17",
+        work_done="Сделал <задачи>",
+        problems="",
+        completed_tasks_count=2,
+        completed_tasks_titles="Задача 1\nЗадача <2>",
+        in_process_tasks_count=1,
+        in_process_tasks_titles="Текущая",
+    )
+    daily_reports = FakeDailyReportsService([report], today="2026-05-17")
+    auth = FakeLeadAuthService(team=[100, 101])
+    bot = FakeLeadBot({100: FakeChatInfo(username="employee")})
+    router = build_router(auth=auth, daily_reports=daily_reports)
+    state = FakeLeadState()
+    message = FakeLeadMessage(user_id=200, bot=bot)
+    callback = FakeCallback(
+        data=f"{CAL_PREFIX}:pick:2026:5:17",
+        user_id=200,
+        bot=bot,
+        message=message,
+    )
+
+    run(get_handler(router, "lead_daily_reports_calendar")(callback, state))
+
+    assert state.clear_count == 1
+    assert daily_reports.list_calls == [("2026-05-17", [100, 101])]
+    assert message.edits[0]["text"] == LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT.format(date="2026-05-17")
+    assert len(message.answers) == 1
+    rendered = message.answers[0]["text"]
+    assert "@employee" in rendered
+    assert "Сделал &lt;задачи&gt;" in rendered
+    assert "Задача &lt;2&gt;" in rendered
+    assert "<b>Выполненныx задач за день:</b> 2" in rendered
+    assert all(answer["text"] != LEAD_REPORTS_TEXT for answer in message.answers)
+
+
+def test_lead_daily_reports_pick_date_empty_result_does_not_repeat_reports_menu_text():
+    daily_reports = FakeDailyReportsService(today="2026-05-17")
+    auth = FakeLeadAuthService(team=[100])
+    router = build_router(auth=auth, daily_reports=daily_reports)
+    state = FakeLeadState()
+    message = FakeLeadMessage(user_id=200)
+    callback = FakeCallback(data=f"{CAL_PREFIX}:pick:2026:5:17", user_id=200, message=message)
+
+    run(get_handler(router, "lead_daily_reports_calendar")(callback, state))
+
+    assert state.clear_count == 1
+    assert message.edits[0]["text"] == LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT.format(date="2026-05-17")
+    assert message.answers[0]["text"] == LEAD_DAILY_REPORTS_EMPTY_TEXT
+    assert all(answer["text"] != LEAD_REPORTS_TEXT for answer in message.answers)
+
+
+def test_lead_daily_reports_rejects_dates_older_than_one_year():
+    daily_reports = FakeDailyReportsService(today="2026-05-17")
+    router = build_router(daily_reports=daily_reports)
+    state = FakeLeadState()
+    callback = FakeCallback(data=f"{CAL_PREFIX}:pick:2025:5:16", user_id=200)
+
+    run(get_handler(router, "lead_daily_reports_calendar")(callback, state))
+
+    assert callback.answers[0]["text"] == LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT
+    assert callback.answers[0]["show_alert"] is True
+    assert daily_reports.list_calls == []
+    assert state.clear_count == 0

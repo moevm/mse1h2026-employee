@@ -7,6 +7,7 @@ from conftest import FakeBot, FakeMessage, FakeState
 from roles import Role
 from services.manager_binding_service import ManagerBindRequest
 from services.reports_service import ReportRecord
+from services.daily_reports_service import DailyReportRecord
 from services.task_request_service import TaskRequestRecord
 from services.tasks_service import TaskRecord
 
@@ -72,13 +73,37 @@ class FakeTasksService:
     def __init__(self, tasks: list[TaskRecord] | None = None, *, update_returns_none: bool = False):
         self.tasks = {task.task_id: task for task in (tasks or [])}
         self.update_returns_none = update_returns_none
-        self.list_calls: list[int] = []
+        self.list_calls: list[tuple[int, set[str] | None]] = []
+        self.completed_calls: list[tuple[int, str]] = []
+        self.in_process_calls: list[int] = []
         self.get_calls: list[str] = []
         self.update_calls: list[tuple[str, str]] = []
 
-    def list_tasks_assigned_to(self, employee_id: int) -> list[TaskRecord]:
-        self.list_calls.append(employee_id)
-        return [task for task in self.tasks.values() if task.employee_id == employee_id]
+    @staticmethod
+    def _date_part(value: str) -> str:
+        return str(value or "").strip()[:10]
+
+    def list_tasks_assigned_to(self, employee_id: int, statuses: set[str] | None = None) -> list[TaskRecord]:
+        self.list_calls.append((employee_id, statuses))
+        tasks = [task for task in self.tasks.values() if task.employee_id == employee_id]
+        if statuses is not None:
+            allowed = {status.strip().lower() for status in statuses}
+            tasks = [task for task in tasks if (task.status or "").strip().lower() in allowed]
+        return tasks
+
+    def list_completed_tasks_for_date(self, employee_id: int, report_date: str) -> list[TaskRecord]:
+        self.completed_calls.append((employee_id, report_date))
+        return list(reversed([
+            task
+            for task in self.tasks.values()
+            if task.employee_id == employee_id
+            and (task.status or "").strip().lower() in {"finished", "on consideration"}
+            and self._date_part(task.updated_at) == report_date
+        ]))
+
+    def list_in_process_tasks(self, employee_id: int) -> list[TaskRecord]:
+        self.in_process_calls.append(employee_id)
+        return self.list_tasks_assigned_to(employee_id, {"in process"})
 
     def get_task_by_id(self, task_id: str) -> TaskRecord | None:
         self.get_calls.append(task_id)
@@ -109,6 +134,62 @@ class FakeReportsService:
         return f"report-{task_id}"
 
 
+class FakeAcceptedTasksService:
+    def __init__(self, *, titles_by_key: dict[tuple[int, str], list[str]] | None = None):
+        self.titles_by_key = titles_by_key or {}
+        self.title_calls: list[tuple[int, str]] = []
+
+    def list_task_titles_for_employee_on_date(self, employee_id: int, report_date: str) -> list[str]:
+        self.title_calls.append((employee_id, report_date))
+        return list(self.titles_by_key.get((employee_id, report_date), []))
+
+
+class FakeDailyReportsService:
+    def __init__(
+        self,
+        reports: list[DailyReportRecord] | None = None,
+        *,
+        today: str = "2026-05-17",
+        was_updated: bool = False,
+    ):
+        self.reports = reports or []
+        self.today = today
+        self.was_updated = was_updated
+        self.create_calls: list[tuple[int, str, str, str, list[str], list[str]]] = []
+        self.list_calls: list[tuple[str, list[int] | None]] = []
+
+    def today_str(self) -> str:
+        return self.today
+
+    def create_or_update_report(
+        self,
+        employee_id: int,
+        report_date: str,
+        work_done: str,
+        problems: str,
+        completed_tasks_titles: list[str],
+        in_process_tasks_titles: list[str],
+    ) -> tuple[str, bool]:
+        self.create_calls.append((
+            employee_id,
+            report_date,
+            work_done,
+            problems,
+            list(completed_tasks_titles),
+            list(in_process_tasks_titles),
+        ))
+        return "daily-report-id", self.was_updated
+
+    def list_reports_for_date(self, report_date: str, employee_ids: list[int] | None = None) -> list[DailyReportRecord]:
+        self.list_calls.append((report_date, list(employee_ids) if employee_ids is not None else None))
+        allowed = set(employee_ids) if employee_ids is not None else None
+        return [
+            report
+            for report in self.reports
+            if report.report_date == report_date and (allowed is None or report.employee_id in allowed)
+        ]
+
+
 class FakeTaskRequestService:
     def __init__(self):
         self.create_calls: list[tuple[str, str, list[int], int]] = []
@@ -127,6 +208,8 @@ def make_task(
     title: str = "Задача",
     description: str = "Описание",
     deadline: str = "2026-12-31",
+    created_at: str = "2026-01-01 09:00:00",
+    updated_at: str = "2026-01-01 09:00:00",
 ) -> TaskRecord:
     return TaskRecord(
         row_index=2,
@@ -136,8 +219,8 @@ def make_task(
         employee_id=employee_id,
         author_id=author_id,
         status=status,
-        created_at="2026-01-01 09:00:00",
-        updated_at="2026-01-01 09:00:00",
+        created_at=created_at,
+        updated_at=updated_at,
         deadline=deadline,
     )
 
@@ -374,3 +457,31 @@ def make_request(token: str = "offer-1", *, lead_id: int = 200, author_id: int =
 
 def make_bind_request(request_id: str = "bind-1", *, lead_id: int = 200, employee_id: int = 100) -> ManagerBindRequest:
     return ManagerBindRequest(request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01")
+
+def make_daily_report(
+    report_id: str = "daily-1",
+    *,
+    employee_id: int = 100,
+    report_date: str = "2026-05-17",
+    work_done: str = "Работа",
+    problems: str = "Проблемы",
+    completed_tasks_count: int = 1,
+    completed_tasks_titles: str = "Готовая задача",
+    in_process_tasks_count: int = 1,
+    in_process_tasks_titles: str = "Текущая задача",
+    created_at: str = "2026-05-17 18:00:00",
+) -> DailyReportRecord:
+    return DailyReportRecord(
+        row_index=2,
+        report_id=report_id,
+        employee_id=employee_id,
+        report_date=report_date,
+        work_done=work_done,
+        problems=problems,
+        completed_tasks_count=completed_tasks_count,
+        completed_tasks_titles=completed_tasks_titles,
+        in_process_tasks_count=in_process_tasks_count,
+        in_process_tasks_titles=in_process_tasks_titles,
+        created_at=created_at,
+        raw_fields={},
+    )
