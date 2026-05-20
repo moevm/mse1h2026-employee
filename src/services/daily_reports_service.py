@@ -217,6 +217,15 @@ class DailyReportsService:
             )
         return report_id, True
 
+
+    def count_missing_reports_for_employee_between(self, employee_id: int, report_dates) -> int:
+        missing_count = 0
+        for report_date in report_dates:
+            normalized_date = report_date.isoformat() if hasattr(report_date, "isoformat") else self._date_part(str(report_date))
+            if self.get_report_for_employee_date(employee_id, normalized_date) is None:
+                missing_count += 1
+        return missing_count
+
     def list_reports_for_date(
         self,
         report_date: str,
