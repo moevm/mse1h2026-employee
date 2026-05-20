@@ -29,8 +29,11 @@ from constants.texts import (
     LEAD_TASK_PROPOSALS_LIST_TEXT,
     LEAD_TASKS_EMPTY_TEXT,
     LEAD_TASKS_LIST_TEXT,
-    LEAD_WEEKLY_SUCCESS,
     LEAD_WEEKLY_TEXT,
+    LEAD_WEEKLY_PERIOD_TEXT,
+    LEAD_WEEKLY_NO_EMPLOYEES_TEXT,
+    LEAD_WEEKLY_INVALID_EMPLOYEE_TEXT,
+    LEAD_WEEKLY_INVALID_PERIOD_TEXT,
     TASK_NOT_FOUND_TEXT,
     VISIT_FINISH_NO_OPEN_TEXT,
     VISIT_FINISH_SUCCESS_TEXT,
@@ -53,6 +56,8 @@ from keyboards.role_menus import (
     LEAD_REPORT_CALLBACK_PREFIX,
     MANAGER_BIND_CALLBACK_PREFIX,
     TASK_PROPOSAL_CALLBACK_PREFIX,
+    get_lead_main_keyboard,
+    get_lead_reports_keyboard,
 )
 from roles import Role
 from states.lead import LeadStates
@@ -73,6 +78,7 @@ from helpers import (
     make_request,
     make_task,
     make_daily_report,
+    make_accepted_task,
 )
 
 
@@ -125,17 +131,147 @@ def test_start_and_finish_work_success_and_failure_texts():
         assert message.answers[-1]["text"] == expected
 
 
-def test_weekly_flow_sets_state_and_finishes_with_success():
-    router = build_router()
-    state = FakeLeadState()
-    message = FakeMessage(user_id=200)
-    run(get_handler(router, "lead_weekly_start")(message, state))
-    assert message.answers[-1]["text"] == LEAD_WEEKLY_TEXT
-    assert state.data["return_to"] == "main"
+def test_weekly_report_button_moved_from_main_menu_to_reports_menu():
+    assert Buttons.LEAD_WEEKLY_REPORT not in get_lead_main_keyboard().texts()
+    assert Buttons.LEAD_WEEKLY_REPORT in get_lead_reports_keyboard().texts()
 
-    run(get_handler(router, "lead_weekly_input")(message, state))
+
+def test_weekly_report_flow_selects_employee_period_and_renders_task_lists():
+    auth = FakeLeadAuthService(team=[100])
+    visits = FakeLeadVisitsService(worked_hours=16.5)
+    accepted = FakeLeadAcceptedTasksService(records=[
+        make_accepted_task(
+            "r-closed",
+            task_title="Закрытая <задача>",
+            description="Описание закрытой",
+            closed_at="2026-05-19 18:00:00",
+            assigned_at="2026-05-18 09:00:00",
+            deadline="2026-05-20",
+        ),
+        make_accepted_task(
+            "r-overdue-closed",
+            task_title="Закрытая поздно",
+            description="Описание просрочки",
+            closed_at="2026-05-20 18:00:00",
+            assigned_at="2026-05-18 10:00:00",
+            deadline="2026-05-19",
+        ),
+        make_accepted_task(
+            "r-overdue-closed-old-deadline",
+            task_title="Закрытая поздно со старым дедлайном",
+            description="Не должна попасть в просрочку выбранной недели",
+            closed_at="2026-05-21 18:00:00",
+            assigned_at="2026-05-15 10:00:00",
+            deadline="2026-05-17",
+        ),
+    ])
+    tasks = FakeLeadTasksService([
+        make_task(
+            "assigned-1",
+            title="Назначенная задача",
+            description="Описание назначенной",
+            created_at="2026-05-18 10:00:00",
+            deadline="2026-05-30",
+            status="created",
+        ),
+        make_task(
+            "overdue-open",
+            title="Открытая просрочка",
+            description="Описание открытой просрочки",
+            created_at="2026-05-01 10:00:00",
+            deadline="2026-05-18",
+            status="in process",
+        ),
+        make_task(
+            "overdue-open-old-deadline",
+            title="Открытая просрочка со старым дедлайном",
+            description="Не должна попасть в просрочку выбранной недели",
+            created_at="2026-05-01 10:00:00",
+            deadline="2026-05-17",
+            status="in process",
+        ),
+    ])
+    daily_reports = FakeDailyReportsService(today="2026-05-20", missing_count=2)
+    bot = FakeLeadBot({100: FakeChatInfo(username="employee")})
+    router = build_router(auth=auth, visits=visits, tasks=tasks, accepted=accepted, daily_reports=daily_reports)
+    state = FakeLeadState()
+    message = FakeMessage(user_id=200, bot=bot)
+
+    run(get_handler(router, "lead_weekly_start")(message, state))
+
+    assert message.answers[-1]["text"] == LEAD_WEEKLY_TEXT
+    assert state.data["return_to"] == "reports"
+    assert state.data["weekly_employee_options"] == {"@employee": 100}
+    weekly_employee_buttons = message.answers[-1]["reply_markup"].texts()
+    assert "@employee" in weekly_employee_buttons
+    assert Buttons.EXIT not in weekly_employee_buttons
+
+    invalid = FakeMessage(text="unknown", user_id=200, bot=bot)
+    run(get_handler(router, "lead_weekly_input")(invalid, state))
+    assert invalid.answers[-1]["text"] == LEAD_WEEKLY_INVALID_EMPLOYEE_TEXT
+    assert Buttons.EXIT not in invalid.answers[-1]["reply_markup"].texts()
     assert state.clear_count == 1
-    assert message.answers[-1]["text"] == LEAD_WEEKLY_SUCCESS
+
+    selected = FakeMessage(text="@employee", user_id=200, bot=bot)
+    run(get_handler(router, "lead_weekly_input")(selected, state))
+
+    assert selected.answers[-1]["text"] == LEAD_WEEKLY_PERIOD_TEXT
+    period_buttons = selected.answers[-1]["reply_markup"].texts()
+    assert len(period_buttons) == 5
+    assert period_buttons[0].startswith("Текущая неделя: 18.05.2026 — 20.05.2026")
+    assert state.data["weekly_employee_id"] == 100
+
+    invalid_period = FakeMessage(text="не тот период", user_id=200, bot=bot)
+    run(get_handler(router, "lead_weekly_period_input")(invalid_period, state))
+    assert invalid_period.answers[-1]["text"] == LEAD_WEEKLY_INVALID_PERIOD_TEXT
+
+    period = FakeMessage(text=period_buttons[0], user_id=200, bot=bot)
+    run(get_handler(router, "lead_weekly_period_input")(period, state))
+
+    assert state.clear_count == 2
+    rendered = period.answers[-1]["text"]
+    assert "@employee" in rendered
+    assert "<b>Период:</b> 2026-05-18 — 2026-05-20" in rendered
+    assert "<b>Закрытые задачи:</b> 2" in rendered
+    assert "Закрытая &lt;задача&gt;" in rendered
+    assert "Описание закрытой" in rendered
+    assert "Дата закрытия: 2026-05-19" in rendered
+    assert "<b>Назначенные задачи:</b> 1" in rendered
+    assert "Назначенная задача" in rendered
+    assert "Дата назначения: 2026-05-18" in rendered
+    assert "<b>Задачи с просроченным дедлайном:</b> 2" in rendered
+    assert "Закрытая поздно" in rendered
+    assert "Открытая просрочка" in rendered
+    assert "Дедлайн: 2026-05-19" in rendered
+    assert "Дедлайн: 2026-05-18" in rendered
+    overdue_block = rendered.split("<b>Задачи с просроченным дедлайном:</b> 2", 1)[1].split("<b>Отработанных часов:</b>", 1)[0]
+    assert "Дата назначения:" not in overdue_block
+    assert "Дата закрытия:" not in overdue_block
+    closed_block = rendered.split("<b>Закрытые задачи:</b> 2", 1)[1].split("<b>Назначенные задачи:</b>", 1)[0]
+    assert "Дата назначения:" not in closed_block
+    assert "Дата закрытия: 2026-05-19" in closed_block
+    assert "Закрытая поздно со старым дедлайном" not in rendered
+    assert "Открытая просрочка со старым дедлайном" not in rendered
+    assert "<b>Отработанных часов:</b> 16.5\n\n<b>Дней без созданного отчета:</b> 2" in rendered
+    assert "Опоздан" not in rendered
+    assert period.answers[-1]["parse_mode"] == "HTML"
+    assert Buttons.LEAD_WEEKLY_REPORT in period.answers[-1]["reply_markup"].texts()
+    assert accepted.get_all_calls == 1
+    assert tasks.get_all_calls == 1
+    assert visits.hours_calls[0][:1] == (100,)
+    assert daily_reports.missing_calls[0][0] == 100
+
+
+def test_weekly_report_start_shows_empty_team_message():
+    router = build_router(auth=FakeLeadAuthService(team=[]))
+    message = FakeMessage(user_id=200)
+    state = FakeLeadState()
+
+    run(get_handler(router, "lead_weekly_start")(message, state))
+
+    assert message.answers[-1]["text"] == LEAD_WEEKLY_NO_EMPLOYEES_TEXT
+    assert message.answers[-1]["reply_markup"].texts() == get_lead_reports_keyboard().texts()
+    assert state.state is None
 
 
 def test_lead_tasks_list_empty_and_non_empty():
