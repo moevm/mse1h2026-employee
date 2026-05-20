@@ -186,9 +186,6 @@ class TasksService:
 
     @staticmethod
     def _is_not_closed_status(status: str) -> bool:
-        # Accepted/closed tasks are moved to the accepted-tasks sheet and deleted
-        # from the active tasks sheet. Every remaining task is considered not closed
-        # for the weekly report, including tasks on consideration or sent back for edits.
         return (status or "").strip().lower() not in {"accepted", "closed", "done"}
 
     def list_tasks_assigned_to_between(self, employee_id: int, start_date, end_date) -> list[TaskRecord]:
