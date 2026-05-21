@@ -6,9 +6,9 @@ from typing import Any
 from conftest import FakeBot, FakeMessage, FakeState
 
 from roles import Role
+from services.daily_reports_service import DailyReportRecord
 from services.manager_binding_service import ManagerBindRequest
 from services.reports_service import ReportRecord
-from services.daily_reports_service import DailyReportRecord
 from services.task_request_service import TaskRequestRecord
 from services.tasks_service import TaskRecord
 
@@ -99,23 +99,36 @@ class FakeTasksService:
     def _date_part(value: str) -> str:
         return str(value or "").strip()[:10]
 
-    def list_tasks_assigned_to(self, employee_id: int, statuses: set[str] | None = None) -> list[TaskRecord]:
+    def list_tasks_assigned_to(
+        self, employee_id: int, statuses: set[str] | None = None
+    ) -> list[TaskRecord]:
         self.list_calls.append((employee_id, statuses))
-        tasks = [task for task in self.tasks.values() if task.employee_id == employee_id]
+        tasks = [
+            task for task in self.tasks.values() if task.employee_id == employee_id
+        ]
         if statuses is not None:
             allowed = {status.strip().lower() for status in statuses}
-            tasks = [task for task in tasks if (task.status or "").strip().lower() in allowed]
+            tasks = [
+                task for task in tasks if (task.status or "").strip().lower() in allowed
+            ]
         return tasks
 
-    def list_completed_tasks_for_date(self, employee_id: int, report_date: str) -> list[TaskRecord]:
+    def list_completed_tasks_for_date(
+        self, employee_id: int, report_date: str
+    ) -> list[TaskRecord]:
         self.completed_calls.append((employee_id, report_date))
-        return list(reversed([
-            task
-            for task in self.tasks.values()
-            if task.employee_id == employee_id
-            and (task.status or "").strip().lower() in {"finished", "on consideration"}
-            and self._date_part(task.updated_at) == report_date
-        ]))
+        return list(
+            reversed(
+                [
+                    task
+                    for task in self.tasks.values()
+                    if task.employee_id == employee_id
+                    and (task.status or "").strip().lower()
+                    in {"finished", "on consideration"}
+                    and self._date_part(task.updated_at) == report_date
+                ]
+            )
+        )
 
     def list_in_process_tasks(self, employee_id: int) -> list[TaskRecord]:
         self.in_process_calls.append(employee_id)
@@ -151,11 +164,15 @@ class FakeReportsService:
 
 
 class FakeAcceptedTasksService:
-    def __init__(self, *, titles_by_key: dict[tuple[int, str], list[str]] | None = None):
+    def __init__(
+        self, *, titles_by_key: dict[tuple[int, str], list[str]] | None = None
+    ):
         self.titles_by_key = titles_by_key or {}
         self.title_calls: list[tuple[int, str]] = []
 
-    def list_task_titles_for_employee_on_date(self, employee_id: int, report_date: str) -> list[str]:
+    def list_task_titles_for_employee_on_date(
+        self, employee_id: int, report_date: str
+    ) -> list[str]:
         self.title_calls.append((employee_id, report_date))
         return list(self.titles_by_key.get((employee_id, report_date), []))
 
@@ -186,23 +203,30 @@ class FakeDailyReportsService:
         completed_tasks_titles: list[str],
         in_process_tasks_titles: list[str],
     ) -> tuple[str, bool]:
-        self.create_calls.append((
-            employee_id,
-            report_date,
-            work_done,
-            problems,
-            list(completed_tasks_titles),
-            list(in_process_tasks_titles),
-        ))
+        self.create_calls.append(
+            (
+                employee_id,
+                report_date,
+                work_done,
+                problems,
+                list(completed_tasks_titles),
+                list(in_process_tasks_titles),
+            )
+        )
         return "daily-report-id", self.was_updated
 
-    def list_reports_for_date(self, report_date: str, employee_ids: list[int] | None = None) -> list[DailyReportRecord]:
-        self.list_calls.append((report_date, list(employee_ids) if employee_ids is not None else None))
+    def list_reports_for_date(
+        self, report_date: str, employee_ids: list[int] | None = None
+    ) -> list[DailyReportRecord]:
+        self.list_calls.append(
+            (report_date, list(employee_ids) if employee_ids is not None else None)
+        )
         allowed = set(employee_ids) if employee_ids is not None else None
         return [
             report
             for report in self.reports
-            if report.report_date == report_date and (allowed is None or report.employee_id in allowed)
+            if report.report_date == report_date
+            and (allowed is None or report.employee_id in allowed)
         ]
 
 
@@ -525,8 +549,8 @@ def make_bind_request(
 ) -> ManagerBindRequest:
     return ManagerBindRequest(
         request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01"
-def make_bind_request(request_id: str = "bind-1", *, lead_id: int = 200, employee_id: int = 100) -> ManagerBindRequest:
-    return ManagerBindRequest(request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01")
+    )
+
 
 def make_daily_report(
     report_id: str = "daily-1",
