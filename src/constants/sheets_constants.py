@@ -1,5 +1,6 @@
 TG_ID_COLUMN = "Telegram ID"
 ROLE_COLUMN = "Role"
+BAN_CREATED_AT_COLUMN = "CreatedAt"
 MANAGER_IDS_COLUMN = "ManagerIDs"
 
 TASK_ID_COLUMN = "TaskId"
