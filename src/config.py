@@ -53,6 +53,9 @@ def load_config():
         task_requests_sheet_name=os.getenv("TASK_REQUESTS_SHEET_NAME", "Запросы задач"),
         tasks_sheet_name=os.getenv("TASKS_SHEET_NAME", "Задачи"),
         reports_sheet_name=os.getenv("REPORTS_SHEET_NAME", "Отчеты"),
+        daily_reports_sheet_name=os.getenv(
+            "DAILY_REPORTS_SHEET_NAME", "Ежедневные отчеты"
+        ),
         accepted_tasks_sheet_name=os.getenv(
             "ACCEPTED_TASKS_SHEET_NAME", "Принятые задачи"
         ),
@@ -60,10 +63,6 @@ def load_config():
             "MANAGER_BIND_REQUESTS_SHEET_NAME", "Запросы руководителей"
         ),
         banned_users_sheet_name=os.getenv("BANNED_USERS_SHEET_NAME", "Заблокированные"),
-
-        daily_reports_sheet_name=os.getenv("DAILY_REPORTS_SHEET_NAME", "Ежедневные отчеты"),
-        accepted_tasks_sheet_name=os.getenv("ACCEPTED_TASKS_SHEET_NAME", "Принятые задачи"),
-        manager_bind_requests_sheet_name=os.getenv("MANAGER_BIND_REQUESTS_SHEET_NAME", "Запросы руководителей"),
     )
     reminders = ReminderConfig(
         timezone=os.getenv("REMINDERS_TIMEZONE", "Europe/Moscow"),
