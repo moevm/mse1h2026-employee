@@ -23,5 +23,8 @@ class ActiveRoleFilter(BaseFilter):
         if user is None:
             return False
 
+        if self.auth_service.is_banned(user.id):
+            return False
+
         active_role = self.auth_service.get_active_role(user.id)
         return active_role in self.roles
