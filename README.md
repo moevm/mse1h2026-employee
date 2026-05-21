@@ -4,7 +4,7 @@
 
 - Python **3.11+**
 - Аккаунт Google с доступом к Google Sheets API (при необходимости обратитесь к google_acc_readme.md за подробностями)
-- Telegram Bot Token 
+- Telegram Bot Token
 
 ## Установка
 
@@ -18,15 +18,23 @@
 
 ```bash
 git clone https://github.com/moevm/mse1h2026-employee.git
-cd src
+cd mse1h2026-employee
 ```
 
 ### 2. Создание виртуального окружения
 
+#### Linux / macOS
+
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate      # Linux / macOS
-call .venv\Scripts\activate    # Windows
+source .venv/bin/activate
+```
+
+#### Windows
+
+```bat
+python -m venv .venv
+call .venv\Scripts\activate
 ```
 
 ### 3. Установка зависимостей
@@ -43,7 +51,7 @@ pip install aiogram apscheduler gspread google-auth python-dotenv
 
 ### 4. Конфигурация проекта
 
-Необходимо создать файл .env в корневой директории проекта. В нем задаются переменные окружения
+Необходимо создать файл `.env` в корневой директории проекта. В нем задаются переменные окружения.
 
 #### Описание и примеры переменных окружения
 
@@ -62,13 +70,53 @@ pip install aiogram apscheduler gspread google-auth python-dotenv
 | `REMINDER_MORNING_TIME` | Время утреннего напоминания | `08:50` |
 | `REMINDER_EVENING_TIME` | Время вечернего напоминания | `16:50` |
 
+## Инициализация таблиц
+
+После установки необходимо создать стартовую структуру Google Sheets.
+
+### Автоматическая инициализация
+
+При запуске setup-скриптов таблицы создаются автоматически:
+
+#### Linux / macOS
+
+```bash
+bash setup/setup.sh
+```
+
+#### Windows
+
+```bat
+setup\setup.bat
+```
+
+### Ручная инициализация
+
+```bash
+python setup/init_tables.py
+```
+
+Скрипт:
+- создаёт отсутствующие листы;
+- создаёт заголовки таблиц;
+- безопасен для повторного запуска.
+
 ## Запуск
 
 Введите команды:
+
+### Linux / macOS
+
 ```bash
-source .venv/bin/activate      # Linux / macOS
-call .venv\Scripts\activate    # Windows
-python main.py
+source .venv/bin/activate
+python src/main.py
+```
+
+### Windows
+
+```bat
+call .venv\Scripts\activate
+python src/main.py
 ```
 
 Теперь необходимо открыть бота в Telegram и отправить ему команду `/start`
@@ -83,7 +131,6 @@ python main.py
 | 2 | employee | 1 |
 | 3 | intern | 1 |
 | 4 | superuser | |
-
 
 ### Лист «Задачи»
 
@@ -108,9 +155,11 @@ python main.py
 
 1. Узнать свой Telegram ID
 2. Добавить строку в лист «Роли»:
-   ```
-   TgID: <ваш_id>
-   Role: superuser
-   ManagerIDs: (пусто)
-   ```
+
+```text
+TgID: <ваш_id>
+Role: superuser
+ManagerIDs: (пусто)
+```
+
 3. Запустить бота и отправить ему команду `/start`
