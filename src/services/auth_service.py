@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from constants.sheets_constants import (
+    BAN_CREATED_AT_COLUMN,
     MANAGER_IDS_COLUMN,
     NOTIFICATION_EVENING_TIME_COLUMN,
     NOTIFICATION_MORNING_TIME_COLUMN,
@@ -22,9 +24,15 @@ class AuthUser:
 
 
 class AuthService:
-    def __init__(self, sheets_client: GoogleSheetsClient, roles_sheet_name: str):
+    def __init__(
+        self,
+        sheets_client: GoogleSheetsClient,
+        roles_sheet_name: str,
+        banned_users_sheet_name: str = "Заблокированные",
+    ):
         self.sheets_client = sheets_client
         self.roles_sheet_name = roles_sheet_name
+        self.banned_users_sheet_name = banned_users_sheet_name
         self._active_roles: dict[int, Role] = {}
 
     def get_user_roles(self, tg_id: int):
@@ -63,7 +71,6 @@ class AuthService:
 
         unique_ids = list(dict.fromkeys(tg_ids))
         return unique_ids
-    
 
     def get_user_ids_by_role(self, role: Role):
         records = self.sheets_client.get_all_records(self.roles_sheet_name)
@@ -84,6 +91,7 @@ class AuthService:
                 continue
 
         return list(dict.fromkeys(tg_ids))
+
     def get_manager_ids_for_user(self, tg_id: int, role: Role | None = None):
         records = self.sheets_client.get_all_records(self.roles_sheet_name)
 
@@ -110,7 +118,7 @@ class AuthService:
                     manager_ids.append(int(digits))
 
         return list(dict.fromkeys(manager_ids))
-    
+
     def get_team_members_for_manager(
         self,
         manager_id: int,
@@ -146,7 +154,7 @@ class AuthService:
 
     def get_employees_for_manager(self, manager_id: int) -> list[int]:
         return self.get_team_members_for_manager(manager_id, (Role.EMPLOYEE,))
-    
+
     def get_all_users(self) -> list[AuthUser]:
         return [
             AuthUser(tg_id=tg_id, roles=self.get_user_roles(tg_id))
@@ -161,11 +169,19 @@ class AuthService:
 
         headers = values[0]
         tg_index = next(
-            (index for index, header in enumerate(headers) if str(header).strip() == TG_ID_COLUMN),
+            (
+                index
+                for index, header in enumerate(headers)
+                if str(header).strip() == TG_ID_COLUMN
+            ),
             None,
         )
         role_index = next(
-            (index for index, header in enumerate(headers) if str(header).strip() == ROLE_COLUMN),
+            (
+                index
+                for index, header in enumerate(headers)
+                if str(header).strip() == ROLE_COLUMN
+            ),
             None,
         )
 
@@ -178,7 +194,9 @@ class AuthService:
 
         for row_index, row in enumerate(values[1:], start=2):
             row_tg_id = str(row[tg_index]).strip() if tg_index < len(row) else ""
-            row_role = str(row[role_index]).strip().lower() if role_index < len(row) else ""
+            row_role = (
+                str(row[role_index]).strip().lower() if role_index < len(row) else ""
+            )
 
             if row_tg_id == normalized_tg_id and row_role == normalized_role:
                 matching_rows.append(row_index)
@@ -193,7 +211,6 @@ class AuthService:
             self.logout(tg_id)
 
         return True
-    
 
     def add_manager_for_user(self, tg_id: int, role: Role, manager_id: int) -> bool:
         values = self.sheets_client.get_all_values(self.roles_sheet_name)
@@ -204,7 +221,11 @@ class AuthService:
 
         def find_col(header_name: str) -> int | None:
             return next(
-                (index + 1 for index, header in enumerate(headers) if str(header).strip() == header_name),
+                (
+                    index + 1
+                    for index, header in enumerate(headers)
+                    if str(header).strip() == header_name
+                ),
                 None,
             )
 
@@ -226,12 +247,20 @@ class AuthService:
 
         for row_index, row in enumerate(values[1:], start=2):
             row_tg_id = str(row[tg_col - 1]).strip() if tg_col - 1 < len(row) else ""
-            row_role = str(row[role_col - 1]).strip().lower() if role_col - 1 < len(row) else ""
+            row_role = (
+                str(row[role_col - 1]).strip().lower()
+                if role_col - 1 < len(row)
+                else ""
+            )
 
             if row_tg_id != normalized_tg_id or row_role != normalized_role:
                 continue
 
-            raw_managers = str(row[managers_col - 1]).strip() if managers_col - 1 < len(row) else ""
+            raw_managers = (
+                str(row[managers_col - 1]).strip()
+                if managers_col - 1 < len(row)
+                else ""
+            )
             manager_ids = []
             for value in re.split(r"[,;\n]+", raw_managers):
                 digits = re.sub(r"\D", "", value)
@@ -266,11 +295,21 @@ class AuthService:
 
     def _find_roles_column(self, headers: list[str], column_name: str) -> int | None:
         return next(
-            (index + 1 for index, header in enumerate(headers) if str(header).strip() == column_name),
+            (
+                index + 1
+                for index, header in enumerate(headers)
+                if str(header).strip() == column_name
+            ),
             None,
         )
 
-    def get_notification_settings(self, tg_id: int, default_morning_time: str, default_evening_time: str, default_timezone: str) -> dict[str, str]:
+    def get_notification_settings(
+        self,
+        tg_id: int,
+        default_morning_time: str,
+        default_evening_time: str,
+        default_timezone: str,
+    ) -> dict[str, str]:
         values = self.sheets_client.get_all_values(self.roles_sheet_name)
         if not values:
             return {
@@ -298,9 +337,21 @@ class AuthService:
             if row_tg_id != normalized_tg_id:
                 continue
 
-            morning_time = str(row[morning_col - 1]).strip() if morning_col and morning_col - 1 < len(row) else ""
-            evening_time = str(row[evening_col - 1]).strip() if evening_col and evening_col - 1 < len(row) else ""
-            timezone = str(row[timezone_col - 1]).strip() if timezone_col and timezone_col - 1 < len(row) else ""
+            morning_time = (
+                str(row[morning_col - 1]).strip()
+                if morning_col and morning_col - 1 < len(row)
+                else ""
+            )
+            evening_time = (
+                str(row[evening_col - 1]).strip()
+                if evening_col and evening_col - 1 < len(row)
+                else ""
+            )
+            timezone = (
+                str(row[timezone_col - 1]).strip()
+                if timezone_col and timezone_col - 1 < len(row)
+                else ""
+            )
 
             return {
                 "morning_time": morning_time or default_morning_time,
@@ -314,7 +365,9 @@ class AuthService:
             "timezone": default_timezone,
         }
 
-    def set_notification_settings(self, tg_id: int, morning_time: str, evening_time: str, timezone: str) -> bool:
+    def set_notification_settings(
+        self, tg_id: int, morning_time: str, evening_time: str, timezone: str
+    ) -> bool:
         values = self.sheets_client.get_all_values(self.roles_sheet_name)
         if not values:
             return False
@@ -336,9 +389,15 @@ class AuthService:
             if row_tg_id != normalized_tg_id:
                 continue
 
-            self.sheets_client.update_cell(self.roles_sheet_name, row_index, morning_col, morning_time)
-            self.sheets_client.update_cell(self.roles_sheet_name, row_index, evening_col, evening_time)
-            self.sheets_client.update_cell(self.roles_sheet_name, row_index, timezone_col, timezone)
+            self.sheets_client.update_cell(
+                self.roles_sheet_name, row_index, morning_col, morning_time
+            )
+            self.sheets_client.update_cell(
+                self.roles_sheet_name, row_index, evening_col, evening_time
+            )
+            self.sheets_client.update_cell(
+                self.roles_sheet_name, row_index, timezone_col, timezone
+            )
             updated = True
 
         return updated
@@ -372,3 +431,75 @@ class AuthService:
 
     def grant_role(self, tg_id: int, role: Role):
         self.sheets_client.append_row(self.roles_sheet_name, [tg_id, role.value])
+
+    def _ensure_ban_sheet(self) -> None:
+        try:
+            self.sheets_client.get_all_values(self.banned_users_sheet_name)
+        except Exception:
+            ws = self.sheets_client.spreadsheet.add_worksheet(
+                title=self.banned_users_sheet_name, rows=100, cols=2
+            )
+            ws.append_row([TG_ID_COLUMN, BAN_CREATED_AT_COLUMN])
+
+    def is_banned(self, tg_id: int) -> bool:
+        try:
+            records = self.sheets_client.get_all_records(self.banned_users_sheet_name)
+        except Exception:
+            return False
+        normalized = str(tg_id).strip()
+        return any(
+            str(row.get(TG_ID_COLUMN, "")).strip() == normalized for row in records
+        )
+
+    def ban_user(self, tg_id: int) -> bool:
+        self._ensure_ban_sheet()
+        if self.is_banned(tg_id):
+            return False
+        created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        self.sheets_client.append_row(
+            self.banned_users_sheet_name,
+            [tg_id, created_at],
+        )
+        self.logout(tg_id)
+        return True
+
+    def unban_user(self, tg_id: int) -> bool:
+        try:
+            values = self.sheets_client.get_all_values(self.banned_users_sheet_name)
+        except Exception:
+            return False
+        if not values:
+            return False
+
+        headers = values[0]
+        tg_index = next(
+            (i for i, h in enumerate(headers) if str(h).strip() == TG_ID_COLUMN),
+            None,
+        )
+        if tg_index is None:
+            return False
+
+        normalized = str(tg_id).strip()
+        rows_to_delete = [
+            row_index
+            for row_index, row in enumerate(values[1:], start=2)
+            if (str(row[tg_index]).strip() if tg_index < len(row) else "") == normalized
+        ]
+        if not rows_to_delete:
+            return False
+
+        for row_index in reversed(rows_to_delete):
+            self.sheets_client.delete_row(self.banned_users_sheet_name, row_index)
+        return True
+
+    def get_banned_users(self) -> list[int]:
+        try:
+            records = self.sheets_client.get_all_records(self.banned_users_sheet_name)
+        except Exception:
+            return []
+        result: list[int] = []
+        for row in records:
+            raw = str(row.get(TG_ID_COLUMN, "")).strip()
+            if raw.isdigit():
+                result.append(int(raw))
+        return result
