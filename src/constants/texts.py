@@ -55,7 +55,9 @@ FINISH_WORK_TEXT = "Завершение рабочего дня пока реа
 CREATE_MY_TASK_TEXT = "Создание личной задачи пока реализовано как заглушка."
 MY_TASKS_TEXT = "Список задач пока реализован как заглушка."
 COMPLETE_TASK_TEXT = "Отправка отчета пока реализована как заглушка."
-REPORT_COMMENT_TEXT = "Просмотр комментария к отчету пока реализован как заглушка."
+
+REPORT_COMMENT_TEXT = "Причины отказа в принятии отчета:"
+REPORT_COMMENT_EMPTY_TEXT = "Нет отклоненных отчетов с комментариями."
 
 LEAD_TASK_PROPOSALS_LIST_TEXT = "Предложенные задачи:"
 LEAD_TASK_PROPOSALS_EMPTY_TEXT = "Нет предложенных задач."
@@ -207,3 +209,16 @@ NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
     "Некорректный порядок времени. "
     "Время начала дня должно быть раньше времени окончания дня."
 )
+
+
+
+DAILY_REPORT_WORK_DONE_PROMPT = "Какая работа была проделана?"
+DAILY_REPORT_PROBLEMS_PROMPT = "С какими проблемами пришлось столкнуться? Если проблем не было — отправьте '-'."
+DAILY_REPORT_EMPTY_TEXT = "Ответ не должен быть пустым."
+DAILY_REPORT_SAVED_TEXT = "Ежедневный отчет сохранен."
+DAILY_REPORT_UPDATED_TEXT = "Ежедневный отчет за сегодня обновлен."
+
+LEAD_DAILY_REPORTS_SELECT_DATE_TEXT = "Выберите дату ежедневных отчетов."
+LEAD_DAILY_REPORTS_EMPTY_TEXT = "За выбранную дату ежедневных отчетов по вашей команде нет."
+LEAD_DAILY_REPORTS_OUT_OF_RANGE_TEXT = "Можно смотреть ежедневные отчеты только за период от сегодняшнего дня до года назад."
+LEAD_DAILY_REPORTS_SELECTED_DATE_TEXT = "Ежедневные отчеты за {date}:"

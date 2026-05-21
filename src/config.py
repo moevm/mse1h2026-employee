@@ -21,6 +21,7 @@ class SheetsConfig:
     task_requests_sheet_name: str
     tasks_sheet_name: str
     reports_sheet_name: str
+    daily_reports_sheet_name: str
     accepted_tasks_sheet_name: str
     manager_bind_requests_sheet_name: str
     banned_users_sheet_name: str
@@ -59,6 +60,10 @@ def load_config():
             "MANAGER_BIND_REQUESTS_SHEET_NAME", "Запросы руководителей"
         ),
         banned_users_sheet_name=os.getenv("BANNED_USERS_SHEET_NAME", "Заблокированные"),
+
+        daily_reports_sheet_name=os.getenv("DAILY_REPORTS_SHEET_NAME", "Ежедневные отчеты"),
+        accepted_tasks_sheet_name=os.getenv("ACCEPTED_TASKS_SHEET_NAME", "Принятые задачи"),
+        manager_bind_requests_sheet_name=os.getenv("MANAGER_BIND_REQUESTS_SHEET_NAME", "Запросы руководителей"),
     )
     reminders = ReminderConfig(
         timezone=os.getenv("REMINDERS_TIMEZONE", "Europe/Moscow"),

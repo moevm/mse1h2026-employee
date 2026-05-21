@@ -17,6 +17,11 @@ from constants.texts import (
     REPORT_EMPTY_TEXT,
     REPORT_SENT_TEXT,
     REPORT_TEXT_PROMPT,
+    DAILY_REPORT_EMPTY_TEXT,
+    DAILY_REPORT_PROBLEMS_PROMPT,
+    DAILY_REPORT_SAVED_TEXT,
+    DAILY_REPORT_UPDATED_TEXT,
+    DAILY_REPORT_WORK_DONE_PROMPT,
     TASK_ACCEPT_SUCCESS_TEXT,
     TASK_ACTION_NOT_ALLOWED_TEXT,
     TASK_FINISH_SUCCESS_TEXT,
@@ -31,10 +36,13 @@ from keyboards.role_menus import TASK_CALLBACK_PREFIX
 from roles import Role
 from states.manager_binding import ManagerBindingStates
 from states.task_report import TaskReportStates
+from states.daily_report import DailyReportStates
 
 from helpers import (
     FakeAuthService,
     FakeManagerBindingService,
+    FakeAcceptedTasksService,
+    FakeDailyReportsService,
     FakeReportsService,
     FakeTasksService,
     FakeVisitsService,
@@ -53,6 +61,8 @@ def build_router(
     tasks=None,
     reports=None,
     manager_binding=None,
+    accepted=None,
+    daily_reports=None,
 ):
     return setup_intern_router(
         auth_service=auth or FakeAuthService(),
@@ -60,6 +70,8 @@ def build_router(
         tasks_service=tasks or FakeTasksService(),
         reports_service=reports or FakeReportsService(),
         manager_binding_service=manager_binding or FakeManagerBindingService(),
+        accepted_tasks_service=accepted or FakeAcceptedTasksService(),
+        daily_reports_service=daily_reports or FakeDailyReportsService(),
     )
 
 
@@ -255,3 +267,77 @@ def test_report_send_for_intern_rejects_empty_and_successfully_sends_report():
     assert bot.edited_messages[0]["chat_id"] == 900
     assert message.answers[0]["text"] == REPORT_SENT_TEXT
     assert state.clear_count == 1
+
+
+def test_daily_report_flow_saves_intern_answers_and_task_snapshot():
+    tasks = FakeTasksService([
+        make_task("done", employee_id=300, status="finished", title="Сделанная задача", updated_at="2026-05-17 13:00:00"),
+        make_task("progress", employee_id=300, status="in process", title="Практика в работе"),
+        make_task("foreign", employee_id=301, status="finished", title="Чужая", updated_at="2026-05-17 13:00:00"),
+    ])
+    accepted = FakeAcceptedTasksService(titles_by_key={(300, "2026-05-17"): ["Уже принятая"]})
+    daily_reports = FakeDailyReportsService(today="2026-05-17", was_updated=False)
+    router = build_router(tasks=tasks, accepted=accepted, daily_reports=daily_reports)
+    state = FakeState({"old": "data"})
+
+    start_message = FakeMessage(text=Buttons.INTERN_DAILY_REPORT, user_id=300)
+    run(get_handler(router, "daily_report_start")(start_message, state))
+    assert state.clear_count == 1
+    assert state.state is DailyReportStates.waiting_work_done
+    assert start_message.answers[0]["text"] == DAILY_REPORT_WORK_DONE_PROMPT
+
+    work_message = FakeMessage(text="Изучал проект", user_id=300)
+    run(get_handler(router, "daily_report_work_done")(work_message, state))
+    assert state.state is DailyReportStates.waiting_problems
+    assert work_message.answers[0]["text"] == DAILY_REPORT_PROBLEMS_PROMPT
+
+    problems_message = FakeMessage(text="Не хватило доступов", user_id=300)
+    run(get_handler(router, "daily_report_problems")(problems_message, state))
+
+    assert daily_reports.create_calls == [
+        (
+            300,
+            "2026-05-17",
+            "Изучал проект",
+            "Не хватило доступов",
+            ["Сделанная задача", "Уже принятая"],
+            ["Практика в работе"],
+        )
+    ]
+    assert state.clear_count == 2
+    assert problems_message.answers[0]["text"] == DAILY_REPORT_SAVED_TEXT
+
+
+def test_daily_report_for_intern_validates_empty_problem_and_shows_updated_text():
+    daily_reports = FakeDailyReportsService(today="2026-05-17", was_updated=True)
+    router = build_router(daily_reports=daily_reports)
+    state = FakeState({"daily_work_done": "Повторно описал день"})
+
+    empty_message = FakeMessage(text="  ", user_id=300)
+    run(get_handler(router, "daily_report_problems")(empty_message, state))
+    assert empty_message.answers[0]["text"] == DAILY_REPORT_EMPTY_TEXT
+    assert daily_reports.create_calls == []
+
+    message = FakeMessage(text="-", user_id=300)
+    run(get_handler(router, "daily_report_problems")(message, state))
+    assert daily_reports.create_calls[0][3] == ""
+    assert message.answers[0]["text"] == DAILY_REPORT_UPDATED_TEXT
+
+
+def test_report_comment_button_shows_cancelled_task_feedback_for_intern():
+    tasks = FakeTasksService([
+        make_task("cancelled", employee_id=300, status="cancelled", title="Переделать <модуль>"),
+        make_task("active", employee_id=300, status="finished", title="Не показывать"),
+    ])
+    reports = FakeReportsService(feedback_by_task={"cancelled": "замечание <важно>"})
+    router = build_router(tasks=tasks, reports=reports)
+    message = FakeMessage(text=Buttons.INTERN_REPORT_COMMENT, user_id=300)
+
+    run(get_handler(router, "report_comment")(message))
+
+    rendered = message.answers[0]["text"]
+    assert rendered.startswith(REPORT_COMMENT_TEXT)
+    assert "Переделать &lt;модуль&gt;" in rendered
+    assert "замечание &lt;важно&gt;" in rendered
+    assert "Не показывать" not in rendered
+    assert message.answers[0]["parse_mode"] == "HTML"

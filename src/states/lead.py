@@ -10,3 +10,4 @@ class LeadStates(StatesGroup):
     waiting_weekly_user = State()
     waiting_accept_comment = State()
     waiting_reject_comment = State()
+    waiting_daily_report_date = State()

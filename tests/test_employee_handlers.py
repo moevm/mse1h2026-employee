@@ -21,6 +21,11 @@ from constants.texts import (
     REPORT_EMPTY_TEXT,
     REPORT_SENT_TEXT,
     REPORT_TEXT_PROMPT,
+    DAILY_REPORT_EMPTY_TEXT,
+    DAILY_REPORT_PROBLEMS_PROMPT,
+    DAILY_REPORT_SAVED_TEXT,
+    DAILY_REPORT_UPDATED_TEXT,
+    DAILY_REPORT_WORK_DONE_PROMPT,
     TASK_ACCEPT_SUCCESS_TEXT,
     TASK_ACTION_NOT_ALLOWED_TEXT,
     TASK_FINISH_SUCCESS_TEXT,
@@ -37,10 +42,13 @@ from roles import Role
 from states.manager_binding import ManagerBindingStates
 from states.task_report import TaskReportStates
 from states.task_request import TaskRequestStates
+from states.daily_report import DailyReportStates
 
 from helpers import (
     FakeAuthService,
     FakeManagerBindingService,
+    FakeAcceptedTasksService,
+    FakeDailyReportsService,
     FakeReportsService,
     FakeTasksService,
     FakeVisitsService,
@@ -59,6 +67,8 @@ def build_router(
     tasks=None,
     reports=None,
     manager_binding=None,
+    accepted=None,
+    daily_reports=None,
 ):
     return setup_employee_router(
         auth_service=auth or FakeAuthService(),
@@ -66,6 +76,8 @@ def build_router(
         tasks_service=tasks or FakeTasksService(),
         reports_service=reports or FakeReportsService(),
         manager_binding_service=manager_binding or FakeManagerBindingService(),
+        accepted_tasks_service=accepted or FakeAcceptedTasksService(),
+        daily_reports_service=daily_reports or FakeDailyReportsService(),
     )
 
 
@@ -384,3 +396,96 @@ def test_report_send_updates_task_creates_report_edits_original_message_and_conf
     assert "@boss" in bot.edited_messages[0]["text"]
     assert state.clear_count == 1
     assert message.answers[0]["text"] == REPORT_SENT_TEXT
+
+
+def test_daily_report_flow_saves_employee_answers_and_task_snapshot():
+    tasks = FakeTasksService([
+        make_task("done", status="finished", title="Готовая <задача>", updated_at="2026-05-17 15:00:00"),
+        make_task("consider", status="on consideration", title="На проверке", updated_at="2026-05-17 16:00:00"),
+        make_task("old", status="finished", title="Вчерашняя", updated_at="2026-05-16 18:00:00"),
+        make_task("progress", status="in process", title="В работе"),
+        make_task("created", status="created", title="Не считать"),
+    ])
+    accepted = FakeAcceptedTasksService(
+        titles_by_key={(100, "2026-05-17"): ["Принятая", "Готовая <задача>"]}
+    )
+    daily_reports = FakeDailyReportsService(today="2026-05-17", was_updated=False)
+    router = build_router(tasks=tasks, accepted=accepted, daily_reports=daily_reports)
+    state = FakeState({"old": "data"})
+
+    start_message = FakeMessage(text=Buttons.EMPLOYEE_DAILY_REPORT, user_id=100)
+    run(get_handler(router, "daily_report_start")(start_message, state))
+    assert state.clear_count == 1
+    assert state.state is DailyReportStates.waiting_work_done
+    assert start_message.answers[0]["text"] == DAILY_REPORT_WORK_DONE_PROMPT
+
+    empty_message = FakeMessage(text="  ", user_id=100)
+    run(get_handler(router, "daily_report_work_done")(empty_message, state))
+    assert state.state is DailyReportStates.waiting_work_done
+    assert empty_message.answers[0]["text"] == DAILY_REPORT_EMPTY_TEXT
+
+    work_message = FakeMessage(text="Сделал интеграцию", user_id=100)
+    run(get_handler(router, "daily_report_work_done")(work_message, state))
+    assert state.state is DailyReportStates.waiting_problems
+    assert state.data["daily_work_done"] == "Сделал интеграцию"
+    assert work_message.answers[0]["text"] == DAILY_REPORT_PROBLEMS_PROMPT
+
+    problems_message = FakeMessage(text="-", user_id=100)
+    run(get_handler(router, "daily_report_problems")(problems_message, state))
+
+    assert tasks.completed_calls == [(100, "2026-05-17")]
+    assert accepted.title_calls == [(100, "2026-05-17")]
+    assert tasks.in_process_calls == [100]
+    assert daily_reports.create_calls == [
+        (
+            100,
+            "2026-05-17",
+            "Сделал интеграцию",
+            "",
+            ["На проверке", "Готовая <задача>", "Принятая"],
+            ["В работе"],
+        )
+    ]
+    assert state.clear_count == 2
+    assert problems_message.answers[0]["text"] == DAILY_REPORT_SAVED_TEXT
+
+
+def test_daily_report_cancel_and_update_text_for_employee():
+    updated_daily_reports = FakeDailyReportsService(today="2026-05-17", was_updated=True)
+    router = build_router(
+        tasks=FakeTasksService([make_task("progress", status="in process", title="Текущая")]),
+        daily_reports=updated_daily_reports,
+    )
+
+    cancel_state = FakeState()
+    cancel_message = FakeMessage(text=Buttons.CANCEL, user_id=100)
+    run(get_handler(router, "daily_report_cancel")(cancel_message, cancel_state))
+    assert cancel_state.clear_count == 1
+    assert cancel_message.answers[0]["text"] == ACTION_CANCELLED_TEXT
+
+    state = FakeState({"daily_work_done": "Повторный отчет"})
+    message = FakeMessage(text="Блокеров нет", user_id=100)
+    run(get_handler(router, "daily_report_problems")(message, state))
+    assert updated_daily_reports.create_calls[0][3] == "Блокеров нет"
+    assert message.answers[0]["text"] == DAILY_REPORT_UPDATED_TEXT
+
+
+def test_report_comment_button_shows_cancelled_task_feedback_for_employee():
+    tasks = FakeTasksService([
+        make_task("cancelled", status="cancelled", title="Вернуть <задачу>"),
+        make_task("no-feedback", status="cancelled", title="Без комментария"),
+        make_task("active", status="in process", title="Не показывать"),
+    ])
+    reports = FakeReportsService(feedback_by_task={"cancelled": "<исправить>"})
+    router = build_router(tasks=tasks, reports=reports)
+    message = FakeMessage(text=Buttons.EMPLOYEE_REPORT_COMMENT, user_id=100)
+
+    run(get_handler(router, "report_comment")(message))
+
+    rendered = message.answers[0]["text"]
+    assert rendered.startswith(REPORT_COMMENT_TEXT)
+    assert "Вернуть &lt;задачу&gt;" in rendered
+    assert "&lt;исправить&gt;" in rendered
+    assert "Без комментария" not in rendered
+    assert "Не показывать" not in rendered
+    assert message.answers[0]["parse_mode"] == "HTML"
