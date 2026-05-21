@@ -1,26 +1,38 @@
 import asyncio
 import logging
 
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram import F, Router, Bot
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from constants.bot_constants import Buttons
 from constants.texts import (
-    BAN_USER_NOT_READY_TEXT,
+    BAN_USER_ALREADY_BANNED_TEXT,
+    BAN_USER_CONFIRM_TEXT,
+    BAN_USER_LIST_EMPTY_TEXT,
+    BAN_USER_LIST_TEXT,
+    BAN_USER_SUCCESS_TEXT,
     SUPERUSER_REVOKE_ROLE_EMPTY_TEXT,
     SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER,
     SUPERUSER_REVOKE_ROLE_LIST_TEXT,
     SUPERUSER_REVOKE_ROLE_NOT_FOUND,
     SUPERUSER_REVOKE_ROLE_SUCCESS,
     SUPERUSER_ROLE_REQUESTS_EMPTY_TEXT,
+    UNBAN_USER_LIST_EMPTY_TEXT,
+    UNBAN_USER_LIST_TEXT,
+    UNBAN_USER_NOT_FOUND_TEXT,
+    UNBAN_USER_SUCCESS_TEXT,
 )
 from filters.active_role import ActiveRoleFilter
 from keyboards.role_menus import (
+    SUPERUSER_BAN_CALLBACK_PREFIX,
     SUPERUSER_REVOKE_CALLBACK_PREFIX,
-    get_superuser_menu_keyboard,
+    SUPERUSER_UNBAN_CALLBACK_PREFIX,
     get_role_request_action_keyboard,
+    get_superuser_ban_user_keyboard,
+    get_superuser_menu_keyboard,
     get_superuser_revoke_role_keyboard,
+    get_superuser_unban_user_keyboard,
 )
 from roles import Role
 from services.auth_service import AuthService, AuthUser
@@ -38,7 +50,9 @@ def _build_user_display(chat, tg_id: int) -> str:
 
 
 def _superuser_count(auth_service: AuthService) -> int:
-    return sum(1 for user in auth_service.get_all_users() if Role.SUPERUSER in user.roles)
+    return sum(
+        1 for user in auth_service.get_all_users() if Role.SUPERUSER in user.roles
+    )
 
 
 async def _resolve_user_display(bot: Bot, tg_id: int) -> str:
@@ -183,8 +197,7 @@ def setup_superuser_router(
             roles_text = ", ".join(role.title for role in user.roles)
 
             sent = await message.answer(
-                f"<b>Пользователь:</b> {display}\n"
-                f"<b>Роли:</b> {roles_text}",
+                f"<b>Пользователь:</b> {display}\n<b>Роли:</b> {roles_text}",
                 reply_markup=get_superuser_revoke_role_keyboard(
                     user.tg_id,
                     [role.value for role in user.roles],
@@ -194,9 +207,11 @@ def setup_superuser_router(
             revoke_message_ids.append(sent.message_id)
 
         await state.update_data(revoke_role_message_ids=revoke_message_ids)
-    
+
     @router.callback_query(F.data.startswith(f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:"))
-    async def revoke_role_callback(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    async def revoke_role_callback(
+        callback: CallbackQuery, state: FSMContext, bot: Bot
+    ):
         _, tg_id_str, role_value = callback.data.split(":", 2)
         tg_id = int(tg_id_str)
 
@@ -208,8 +223,12 @@ def setup_superuser_router(
 
         if role == Role.SUPERUSER:
             superuser_count = await asyncio.to_thread(_superuser_count, auth_service)
-            if superuser_count <= 1 and auth_service.can_login_as_role(tg_id, Role.SUPERUSER):
-                await callback.answer(SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER, show_alert=True)
+            if superuser_count <= 1 and auth_service.can_login_as_role(
+                tg_id, Role.SUPERUSER
+            ):
+                await callback.answer(
+                    SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER, show_alert=True
+                )
                 return
 
         success = await asyncio.to_thread(auth_service.revoke_role, tg_id, role)
@@ -223,8 +242,7 @@ def setup_superuser_router(
         if user_roles:
             roles_text = ", ".join(item.title for item in user_roles)
             await callback.message.edit_text(
-                f"<b>Пользователь:</b> {display}\n"
-                f"<b>Роли:</b> {roles_text}",
+                f"<b>Пользователь:</b> {display}\n<b>Роли:</b> {roles_text}",
                 reply_markup=get_superuser_revoke_role_keyboard(
                     tg_id,
                     [item.value for item in user_roles],
@@ -233,8 +251,7 @@ def setup_superuser_router(
             )
         else:
             await callback.message.edit_text(
-                f"<b>Пользователь:</b> {display}\n"
-                f"<b>Роли:</b> нет ролей",
+                f"<b>Пользователь:</b> {display}\n<b>Роли:</b> нет ролей",
                 parse_mode="HTML",
             )
 
@@ -256,10 +273,127 @@ def setup_superuser_router(
         await callback.answer(SUPERUSER_REVOKE_ROLE_SUCCESS.format(role=role.title))
 
     @router.message(F.text == Buttons.SUPERUSER_BAN_USER)
-    async def ban_user_handler(message: Message):
+    async def ban_user_list_handler(message: Message, bot: Bot):
+        users = await asyncio.to_thread(auth_service.get_all_users)
+        banned_ids = await asyncio.to_thread(auth_service.get_banned_users)
+
+        candidates = [
+            u
+            for u in users
+            if u.tg_id not in banned_ids and Role.SUPERUSER not in u.roles
+        ]
+
+        if not candidates:
+            await message.answer(
+                BAN_USER_LIST_EMPTY_TEXT,
+                reply_markup=get_superuser_menu_keyboard(),
+            )
+            return
+
         await message.answer(
-            BAN_USER_NOT_READY_TEXT,
+            BAN_USER_LIST_TEXT,
             reply_markup=get_superuser_menu_keyboard(),
         )
+
+        for user in candidates:
+            display = await _resolve_user_display(bot, user.tg_id)
+            roles_text = ", ".join(role.title for role in user.roles) or "нет ролей"
+            await message.answer(
+                f"<b>Пользователь:</b> {display}\n<b>Роли:</b> {roles_text}",
+                reply_markup=get_superuser_ban_user_keyboard(user.tg_id),
+                parse_mode="HTML",
+            )
+
+    @router.callback_query(
+        F.data.startswith(f"{SUPERUSER_BAN_CALLBACK_PREFIX}:confirm:")
+    )
+    async def ban_user_confirm_callback(callback: CallbackQuery, bot: Bot):
+        _, _, tg_id_str = callback.data.split(":", 2)
+        tg_id = int(tg_id_str)
+
+        success = await asyncio.to_thread(auth_service.ban_user, tg_id)
+        display = await _resolve_user_display(bot, tg_id)
+
+        if success:
+            await callback.message.edit_text(
+                f"<b>Пользователь:</b> {display}\n\n<b>Заблокирован</b>",
+                parse_mode="HTML",
+            )
+            await callback.answer(
+                BAN_USER_SUCCESS_TEXT.format(user=tg_id), show_alert=False
+            )
+            try:
+                from constants.texts import BANNED_USER_RESPONSE_TEXT
+
+                await bot.send_message(tg_id, BANNED_USER_RESPONSE_TEXT)
+            except Exception as exc:
+                logger.warning(
+                    "Не удалось уведомить заблокированного пользователя %s: %s",
+                    tg_id,
+                    exc,
+                )
+        else:
+            await callback.answer(BAN_USER_ALREADY_BANNED_TEXT, show_alert=True)
+
+    @router.callback_query(
+        F.data.startswith(f"{SUPERUSER_BAN_CALLBACK_PREFIX}:cancel:")
+    )
+    async def ban_user_cancel_callback(callback: CallbackQuery):
+        await callback.message.delete()
+        await callback.answer("Отменено.", show_alert=False)
+
+    @router.message(F.text == Buttons.SUPERUSER_UNBAN_USER)
+    async def unban_user_list_handler(message: Message, bot: Bot):
+        banned_ids = await asyncio.to_thread(auth_service.get_banned_users)
+
+        if not banned_ids:
+            await message.answer(
+                UNBAN_USER_LIST_EMPTY_TEXT,
+                reply_markup=get_superuser_menu_keyboard(),
+            )
+            return
+
+        await message.answer(
+            UNBAN_USER_LIST_TEXT,
+            reply_markup=get_superuser_menu_keyboard(),
+        )
+
+        for tg_id in banned_ids:
+            display = await _resolve_user_display(bot, tg_id)
+            await message.answer(
+                f"<b>Пользователь:</b> {display}\n<b>Заблокирован</b>",
+                reply_markup=get_superuser_unban_user_keyboard(tg_id),
+                parse_mode="HTML",
+            )
+
+    @router.callback_query(F.data.startswith(f"{SUPERUSER_UNBAN_CALLBACK_PREFIX}:"))
+    async def unban_user_callback(callback: CallbackQuery, bot: Bot):
+        _, tg_id_str = callback.data.split(":", 1)
+        tg_id = int(tg_id_str)
+
+        success = await asyncio.to_thread(auth_service.unban_user, tg_id)
+        display = await _resolve_user_display(bot, tg_id)
+
+        if success:
+            await callback.message.edit_text(
+                f"<b>Пользователь:</b> {display}\n\n<b>Разблокирован</b>",
+                parse_mode="HTML",
+            )
+            await callback.answer(
+                UNBAN_USER_SUCCESS_TEXT.format(user=tg_id), show_alert=False
+            )
+            try:
+                await bot.send_message(
+                    tg_id,
+                    "Ваш аккаунт разблокирован. Вы снова можете использовать бота.",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Не удалось уведомить разблокированного пользователя %s: %s",
+                    tg_id,
+                    exc,
+                )
+        else:
+            await callback.answer(UNBAN_USER_NOT_FOUND_TEXT, show_alert=True)
 
     return router
