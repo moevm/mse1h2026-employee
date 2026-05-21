@@ -3,25 +3,47 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from conftest import FakeBot, FakeChatInfo, FakeCallback, FakeMessage, FakeState, get_handler
+from conftest import (
+    FakeBot,
+    FakeCallback,
+    FakeChatInfo,
+    FakeMessage,
+    FakeState,
+    get_handler,
+)
+from helpers import (
+    FakeAuthUser,
+    FakeLeadMessage,
+    FakeRoleRequestService,
+    FakeSuperuserAuthService,
+)
+
 from constants.bot_constants import Buttons
 from constants.texts import (
-    BAN_USER_NOT_READY_TEXT,
+    BAN_USER_ALREADY_BANNED_TEXT,
+    BAN_USER_LIST_EMPTY_TEXT,
+    BAN_USER_LIST_TEXT,
     SUPERUSER_REVOKE_ROLE_EMPTY_TEXT,
     SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER,
     SUPERUSER_REVOKE_ROLE_LIST_TEXT,
     SUPERUSER_REVOKE_ROLE_NOT_FOUND,
     SUPERUSER_REVOKE_ROLE_SUCCESS,
     SUPERUSER_ROLE_REQUESTS_EMPTY_TEXT,
+    UNBAN_USER_LIST_EMPTY_TEXT,
+    UNBAN_USER_LIST_TEXT,
 )
 from handlers.superuser import setup_superuser_router
-from keyboards.role_menus import SUPERUSER_REVOKE_CALLBACK_PREFIX
+from keyboards.role_menus import (
+    SUPERUSER_BAN_CALLBACK_PREFIX,
+    SUPERUSER_REVOKE_CALLBACK_PREFIX,
+    SUPERUSER_UNBAN_CALLBACK_PREFIX,
+)
 from roles import Role
 
-from helpers import FakeAuthUser, FakeRoleRequestService, FakeSuperuserAuthService
 
 def run(coro):
     return asyncio.run(coro)
+
 
 def patch_answer_return_message_id(message: FakeMessage, *, start_id: int = 1000):
     orig_answer = message.answer
@@ -41,6 +63,7 @@ def build_router(*, auth=None, req=None):
         role_request_service=req or FakeRoleRequestService(),
     )
 
+
 def test_superuser_role_requests_empty():
     router = build_router(req=FakeRoleRequestService(requests=[]))
     bot = FakeBot()
@@ -50,6 +73,7 @@ def test_superuser_role_requests_empty():
 
     assert message.answers[0]["text"] == SUPERUSER_ROLE_REQUESTS_EMPTY_TEXT
     assert Buttons.SUPERUSER_ROLE_REQUESTS in message.answers[0]["reply_markup"].texts()
+
 
 def test_superuser_role_requests_list_renders_cards_and_actions():
     req = FakeRoleRequestService(
@@ -83,6 +107,7 @@ def test_superuser_role_requests_list_renders_cards_and_actions():
     assert kb2[0][0].callback_data.startswith("req_approve:222:lead")
     assert kb2[0][1].callback_data.startswith("req_deny:222:lead")
 
+
 def test_superuser_role_requests_skips_rows_without_tg_id():
     req = FakeRoleRequestService(
         requests=[
@@ -99,6 +124,7 @@ def test_superuser_role_requests_skips_rows_without_tg_id():
     assert len(message.answers) == 2
     assert "@alice" in message.answers[1]["text"]
 
+
 def test_superuser_approve_invalid_role_alert():
     router = build_router(req=FakeRoleRequestService())
     msg = FakeMessage(user_id=900)
@@ -109,6 +135,7 @@ def test_superuser_approve_invalid_role_alert():
 
     assert cb.answers[-1]["show_alert"] is True
     assert "неверная роль" in (cb.answers[-1]["text"] or "").lower()
+
 
 def test_superuser_approve_success_edits_message():
     req = FakeRoleRequestService(approve_map={(111, "employee"): True})
@@ -124,6 +151,7 @@ def test_superuser_approve_success_edits_message():
     assert req.approve_calls == [(111, Role.EMPLOYEE)]
     assert "Статус: Роль успешно выдана" in msg.edits[-1]["text"]
 
+
 def test_superuser_approve_not_found_edits_message():
     req = FakeRoleRequestService(approve_map={(111, "employee"): False})
     router = build_router(req=req)
@@ -136,6 +164,7 @@ def test_superuser_approve_not_found_edits_message():
 
     assert "Статус: Ошибка. Запрос не найден" in msg.edits[-1]["text"]
 
+
 def test_superuser_deny_invalid_role_alert():
     router = build_router(req=FakeRoleRequestService())
     msg = FakeMessage(user_id=900)
@@ -146,6 +175,7 @@ def test_superuser_deny_invalid_role_alert():
 
     assert cb.answers[-1]["show_alert"] is True
     assert "неверная роль" in (cb.answers[-1]["text"] or "").lower()
+
 
 def test_superuser_deny_success_edits_message():
     req = FakeRoleRequestService(deny_map={(111, "employee"): True})
@@ -160,6 +190,7 @@ def test_superuser_deny_success_edits_message():
     assert req.deny_calls == [(111, Role.EMPLOYEE)]
     assert "Статус: Запрос отклонен" in msg.edits[-1]["text"]
 
+
 def test_superuser_deny_not_found_edits_message():
     req = FakeRoleRequestService(deny_map={(111, "employee"): False})
     router = build_router(req=req)
@@ -172,6 +203,7 @@ def test_superuser_deny_not_found_edits_message():
 
     assert "Статус: Ошибка. Запрос не найден" in msg.edits[-1]["text"]
 
+
 def test_superuser_revoke_role_list_empty():
     auth = FakeSuperuserAuthService(users=[])
     router = build_router(auth=auth)
@@ -183,6 +215,7 @@ def test_superuser_revoke_role_list_empty():
     run(get_handler(router, "revoke_role_list_handler")(message, state, bot))
 
     assert message.answers[0]["text"] == SUPERUSER_REVOKE_ROLE_EMPTY_TEXT
+
 
 def test_superuser_revoke_role_list_saves_message_ids():
     auth = FakeSuperuserAuthService(
@@ -211,18 +244,31 @@ def test_superuser_revoke_role_list_saves_message_ids():
     assert "revoke_role_message_ids" in data
     assert len(data["revoke_role_message_ids"]) == 3
 
+
 def test_superuser_revoke_unknown_role_alert():
-    auth = FakeSuperuserAuthService(users=[FakeAuthUser(tg_id=10, roles=[Role.SUPERUSER])])
+    auth = FakeSuperuserAuthService(
+        users=[FakeAuthUser(tg_id=10, roles=[Role.SUPERUSER])]
+    )
     bot = FakeBot(chats={10: FakeChatInfo(username="admin10")})
     router = build_router(auth=auth)
 
     msg = FakeMessage(user_id=900, bot=bot)
-    cb = FakeCallback(data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:unknown", user_id=900, bot=bot, message=msg)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:unknown",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
 
-    run(get_handler(router, "revoke_role_callback", kind="callback_query")(cb, FakeState(), bot))
+    run(
+        get_handler(router, "revoke_role_callback", kind="callback_query")(
+            cb, FakeState(), bot
+        )
+    )
 
     assert cb.answers[-1]["show_alert"] is True
     assert "Неизвестная роль" in (cb.answers[-1]["text"] or "")
+
 
 def test_superuser_revoke_last_superuser_blocked():
     auth = FakeSuperuserAuthService(
@@ -233,13 +279,23 @@ def test_superuser_revoke_last_superuser_blocked():
     router = build_router(auth=auth)
 
     msg = FakeMessage(user_id=900, bot=bot)
-    cb = FakeCallback(data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:superuser", user_id=900, bot=bot, message=msg)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:superuser",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
 
-    run(get_handler(router, "revoke_role_callback", kind="callback_query")(cb, FakeState(), bot))
+    run(
+        get_handler(router, "revoke_role_callback", kind="callback_query")(
+            cb, FakeState(), bot
+        )
+    )
 
     assert cb.answers[-1]["show_alert"] is True
     assert cb.answers[-1]["text"] == SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER
     assert auth.revoke_calls == []
+
 
 def test_superuser_revoke_role_not_found_alert():
     auth = FakeSuperuserAuthService(
@@ -250,12 +306,22 @@ def test_superuser_revoke_role_not_found_alert():
     router = build_router(auth=auth)
 
     msg = FakeMessage(user_id=900, bot=bot)
-    cb = FakeCallback(data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:employee", user_id=900, bot=bot, message=msg)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_REVOKE_CALLBACK_PREFIX}:10:employee",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
 
-    run(get_handler(router, "revoke_role_callback", kind="callback_query")(cb, FakeState(), bot))
+    run(
+        get_handler(router, "revoke_role_callback", kind="callback_query")(
+            cb, FakeState(), bot
+        )
+    )
 
     assert cb.answers[-1]["show_alert"] is True
     assert cb.answers[-1]["text"] == SUPERUSER_REVOKE_ROLE_NOT_FOUND
+
 
 def test_superuser_revoke_role_success_updates_message_and_deletes_other_messages():
     auth = FakeSuperuserAuthService(
@@ -283,7 +349,11 @@ def test_superuser_revoke_role_success_updates_message_and_deletes_other_message
         message=msg,
     )
 
-    run(get_handler(router, "revoke_role_callback", kind="callback_query")(cb, state, bot))
+    run(
+        get_handler(router, "revoke_role_callback", kind="callback_query")(
+            cb, state, bot
+        )
+    )
 
     assert auth.revoke_calls == [(10, Role.EMPLOYEE)]
     assert "Роли:" in msg.edits[-1]["text"]
@@ -295,7 +365,10 @@ def test_superuser_revoke_role_success_updates_message_and_deletes_other_message
     data = run(state.get_data())
     assert data["revoke_role_message_ids"] == [202]
 
-    assert cb.answers[-1]["text"] == SUPERUSER_REVOKE_ROLE_SUCCESS.format(role=Role.EMPLOYEE.title)
+    assert cb.answers[-1]["text"] == SUPERUSER_REVOKE_ROLE_SUCCESS.format(
+        role=Role.EMPLOYEE.title
+    )
+
 
 def test_superuser_revoke_role_success_when_no_roles_left():
     auth = FakeSuperuserAuthService(
@@ -321,15 +394,187 @@ def test_superuser_revoke_role_success_when_no_roles_left():
         message=msg,
     )
 
-    run(get_handler(router, "revoke_role_callback", kind="callback_query")(cb, state, bot))
+    run(
+        get_handler(router, "revoke_role_callback", kind="callback_query")(
+            cb, state, bot
+        )
+    )
 
     assert "нет ролей" in msg.edits[-1]["text"].lower()
 
-def test_superuser_ban_user_stub():
-    router = build_router()
-    message = FakeMessage(user_id=900)
 
-    run(get_handler(router, "ban_user_handler")(message))
+def test_superuser_ban_user_list_empty():
+    auth = FakeSuperuserAuthService(users=[])
+    router = build_router(auth=auth)
+    bot = FakeBot()
+    message = FakeMessage(user_id=900, bot=bot)
 
-    assert message.answers[0]["text"] == BAN_USER_NOT_READY_TEXT
-    assert Buttons.SUPERUSER_BAN_USER in message.answers[0]["reply_markup"].texts()
+    run(get_handler(router, "ban_user_list_handler")(message, bot))
+
+    assert message.answers[0]["text"] == BAN_USER_LIST_EMPTY_TEXT
+
+
+def test_superuser_ban_user_list_excludes_superusers():
+    auth = FakeSuperuserAuthService(
+        users=[
+            FakeAuthUser(tg_id=10, roles=[Role.SUPERUSER]),
+            FakeAuthUser(tg_id=20, roles=[Role.EMPLOYEE]),
+        ]
+    )
+    bot = FakeBot(chats={20: FakeChatInfo(username="bob")})
+    router = build_router(auth=auth)
+    message = FakeMessage(user_id=900, bot=bot)
+
+    run(get_handler(router, "ban_user_list_handler")(message, bot))
+
+    assert message.answers[0]["text"] == BAN_USER_LIST_TEXT
+    assert len(message.answers) == 2
+    assert "@bob" in message.answers[1]["text"]
+
+
+def test_superuser_ban_user_list_excludes_already_banned():
+    auth = FakeSuperuserAuthService(
+        users=[
+            FakeAuthUser(tg_id=20, roles=[Role.EMPLOYEE]),
+            FakeAuthUser(tg_id=30, roles=[Role.INTERN]),
+        ],
+        banned_ids=[20],
+    )
+    bot = FakeBot(chats={30: FakeChatInfo(username="intern30")})
+    router = build_router(auth=auth)
+    message = FakeMessage(user_id=900, bot=bot)
+
+    run(get_handler(router, "ban_user_list_handler")(message, bot))
+
+    assert len(message.answers) == 2
+    assert "@intern30" in message.answers[1]["text"]
+
+
+def test_superuser_ban_confirm_success():
+    auth = FakeSuperuserAuthService(
+        users=[FakeAuthUser(tg_id=20, roles=[Role.EMPLOYEE])],
+        ban_result=True,
+    )
+    bot = FakeBot(chats={20: FakeChatInfo(username="bob")})
+    router = build_router(auth=auth)
+
+    msg = FakeMessage(user_id=900, bot=bot)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_BAN_CALLBACK_PREFIX}:confirm:20",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
+
+    run(
+        get_handler(router, "ban_user_confirm_callback", kind="callback_query")(cb, bot)
+    )
+
+    assert auth.ban_calls == [20]
+    assert "Заблокирован" in msg.edits[-1]["text"]
+
+
+def test_superuser_ban_confirm_already_banned():
+    auth = FakeSuperuserAuthService(
+        users=[FakeAuthUser(tg_id=20, roles=[Role.EMPLOYEE])],
+        banned_ids=[20],
+        ban_result=False,
+    )
+    bot = FakeBot(chats={20: FakeChatInfo(username="bob")})
+    router = build_router(auth=auth)
+
+    msg = FakeMessage(user_id=900, bot=bot)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_BAN_CALLBACK_PREFIX}:confirm:20",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
+
+    run(
+        get_handler(router, "ban_user_confirm_callback", kind="callback_query")(cb, bot)
+    )
+
+    assert cb.answers[-1]["show_alert"] is True
+    assert cb.answers[-1]["text"] == BAN_USER_ALREADY_BANNED_TEXT
+
+
+def test_superuser_ban_cancel_deletes_message():
+    auth = FakeSuperuserAuthService()
+    router = build_router(auth=auth)
+
+    msg = FakeLeadMessage(user_id=900)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_BAN_CALLBACK_PREFIX}:cancel:20",
+        user_id=900,
+        message=msg,
+    )
+
+    run(get_handler(router, "ban_user_cancel_callback", kind="callback_query")(cb))
+
+    assert msg.deleted is True
+
+
+def test_superuser_unban_list_empty():
+    auth = FakeSuperuserAuthService(banned_ids=[])
+    router = build_router(auth=auth)
+    bot = FakeBot()
+    message = FakeMessage(user_id=900, bot=bot)
+
+    run(get_handler(router, "unban_user_list_handler")(message, bot))
+
+    assert message.answers[0]["text"] == UNBAN_USER_LIST_EMPTY_TEXT
+
+
+def test_superuser_unban_list_shows_banned_users():
+    auth = FakeSuperuserAuthService(banned_ids=[20, 30])
+    bot = FakeBot(
+        chats={
+            20: FakeChatInfo(username="bob"),
+            30: FakeChatInfo(first_name="Alice"),
+        }
+    )
+    router = build_router(auth=auth)
+    message = FakeMessage(user_id=900, bot=bot)
+
+    run(get_handler(router, "unban_user_list_handler")(message, bot))
+
+    assert message.answers[0]["text"] == UNBAN_USER_LIST_TEXT
+    assert len(message.answers) == 3
+
+
+def test_superuser_unban_success():
+    auth = FakeSuperuserAuthService(banned_ids=[20], unban_result=True)
+    bot = FakeBot(chats={20: FakeChatInfo(username="bob")})
+    router = build_router(auth=auth)
+
+    msg = FakeMessage(user_id=900, bot=bot)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_UNBAN_CALLBACK_PREFIX}:20",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
+
+    run(get_handler(router, "unban_user_callback", kind="callback_query")(cb, bot))
+
+    assert auth.unban_calls == [20]
+    assert "Разблокирован" in msg.edits[-1]["text"]
+
+
+def test_superuser_unban_not_found():
+    auth = FakeSuperuserAuthService(banned_ids=[], unban_result=False)
+    bot = FakeBot(chats={20: FakeChatInfo(username="bob")})
+    router = build_router(auth=auth)
+
+    msg = FakeMessage(user_id=900, bot=bot)
+    cb = FakeCallback(
+        data=f"{SUPERUSER_UNBAN_CALLBACK_PREFIX}:20",
+        user_id=900,
+        bot=bot,
+        message=msg,
+    )
+
+    run(get_handler(router, "unban_user_callback", kind="callback_query")(cb, bot))
+
+    assert cb.answers[-1]["show_alert"] is True
