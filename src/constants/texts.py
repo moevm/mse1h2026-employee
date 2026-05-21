@@ -30,6 +30,26 @@ ROLE_REQUESTS_NOT_READY_TEXT = "Список запросов ролей пок�
 CONFIRM_ROLE_NOT_READY_TEXT = "Подтверждение роли пока не реализовано."
 BAN_USER_NOT_READY_TEXT = "Блокировка пользователя пока не реализована."
 
+BAN_USER_LIST_TEXT = "Выберите пользователя для блокировки:"
+BAN_USER_LIST_EMPTY_TEXT = "Нет пользователей для блокировки."
+BAN_USER_CONFIRM_TEXT = (
+    "Пользователь: {user}\n\n"
+    "Вы уверены, что хотите заблокировать этого пользователя?\n"
+    "Он потеряет доступ к боту."
+)
+BAN_USER_SUCCESS_TEXT = "Пользователь {user} заблокирован."
+BAN_USER_ALREADY_BANNED_TEXT = "Этот пользователь уже заблокирован."
+BAN_USER_NOT_FOUND_TEXT = "Пользователь не найден."
+
+UNBAN_USER_LIST_TEXT = "Заблокированные пользователи:"
+UNBAN_USER_LIST_EMPTY_TEXT = "Список заблокированных пользователей пуст."
+UNBAN_USER_SUCCESS_TEXT = "Пользователь {user} разблокирован."
+UNBAN_USER_NOT_FOUND_TEXT = "Пользователь не найден в списке заблокированных."
+
+BANNED_USER_RESPONSE_TEXT = (
+    "Ваш аккаунт заблокирован администратором. Вы не можете использовать этого бота."
+)
+
 START_WORK_TEXT = "Начало рабочего дня пока реализовано как заглушка."
 FINISH_WORK_TEXT = "Завершение рабочего дня пока реализовано как заглушка."
 CREATE_MY_TASK_TEXT = "Создание личной задачи пока реализовано как заглушка."
@@ -48,12 +68,13 @@ LEAD_TASKS_LIST_TEXT = "Ваши созданные задачи:"
 LEAD_TASKS_EMPTY_TEXT = "У вас пока нет созданных задач."
 LEAD_CREATE_TASK_TITLE_PROMPT = "Введите название задачи одним сообщением."
 LEAD_CREATE_TASK_DESCRIPTION_PROMPT = (
-    "Введите описание задачи одним сообщением.\n"
-    "Если описание не нужно — отправьте '-'"
+    "Введите описание задачи одним сообщением.\nЕсли описание не нужно — отправьте '-'"
 )
 LEAD_CREATE_TASK_DEADLINE_PROMPT = "Выберите дедлайн в календаре."
 LEAD_CREATE_TASK_SELECT_EMPLOYEE_PROMPT = "Выберите сотрудника или стажера."
-LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = "Нет сотрудников или стажеров, прикрепленных к вам."
+LEAD_CREATE_TASK_NO_EMPLOYEES_TEXT = (
+    "Нет сотрудников или стажеров, прикрепленных к вам."
+)
 LEAD_CREATE_TASK_INVALID_EMPLOYEE_TEXT = "Используйте кнопки ниже."
 LEAD_CREATE_TASK_SUCCESS = "Задача создана."
 LEAD_CREATE_TASK_DEADLINE_SELECTED = "Дедлайн выбран: {deadline}"
@@ -63,7 +84,9 @@ LEAD_VIEW_REPORT_SUCCESS = "Отчет по задаче '{task_title}'"
 LEAD_CONFIRM_REPORT_SUCCESS = "Отчет по задаче '{task_title}' успешно принят."
 LEAD_REPORT_NOT_FOUND_TEXT = "Отчет не найден."
 LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике создан."
-LEAD_REJECT_REPORT_PROMPT = "Введите комментарий к отклоненному отчету одним сообщением."
+LEAD_REJECT_REPORT_PROMPT = (
+    "Введите комментарий к отклоненному отчету одним сообщением."
+)
 LEAD_REJECT_REPORT_SUCCESS = "Отчет успешно отправлен на доработку."
 LEAD_REJECT_COMMENT_EMPTY = "Комментарий пустой. Введите комментарий еще раз."
 
@@ -120,7 +143,7 @@ EXIT_WITH_OPEN_VISIT_TEXT = (
 
 REPORT_TEXT_PROMPT = "Введите текст отчета одним сообщением."
 REPORT_EMPTY_TEXT = "Текст отчета не должен быть пустым."
-REPORT_SENT_TEXT = "Отчет отправлен. Статус задачи изменен на \"На рассмотрении\"."
+REPORT_SENT_TEXT = 'Отчет отправлен. Статус задачи изменен на "На рассмотрении".'
 LEAD_ACCEPT_REPORT_COMMENT_QUESTION = "Нужен комментарий к принятому отчету?"
 LEAD_ACCEPT_REPORT_COMMENT_PROMPT = "Введите комментарий к отчету одним сообщением."
 LEAD_ACCEPT_REPORT_SUCCESS = "Отчет принят."
@@ -136,7 +159,9 @@ SUPERUSER_REVOKE_ROLE_LIST_TEXT = "Список пользователей с р
 SUPERUSER_REVOKE_ROLE_EMPTY_TEXT = "Нет пользователей с назначенными ролями."
 SUPERUSER_REVOKE_ROLE_SUCCESS = "Роль {role} отозвана."
 SUPERUSER_REVOKE_ROLE_NOT_FOUND = "У пользователя уже нет этой роли."
-SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER = "Нельзя отозвать роль у последнего администратора."
+SUPERUSER_REVOKE_ROLE_LAST_SUPERUSER = (
+    "Нельзя отозвать роль у последнего администратора."
+)
 
 BIND_MANAGER_SELECT_TEXT = "Выберите руководителя, которому хотите отправить запрос."
 BIND_MANAGER_NO_LEADS_TEXT = "Не найдено доступных руководителей."
@@ -147,7 +172,9 @@ BIND_MANAGER_ALREADY_BOUND_TEXT = "Вы уже закреплены за эти�
 
 LEAD_BIND_REQUESTS = "Запросы на привязку"
 LEAD_BIND_REQUESTS_EMPTY_TEXT = "Нет активных запросов на привязку."
-LEAD_BIND_REQUEST_ACCEPTED_TEXT = "Запрос подтвержден. Пользователь {employee_label} закреплен за вами."
+LEAD_BIND_REQUEST_ACCEPTED_TEXT = (
+    "Запрос подтвержден. Пользователь {employee_label} закреплен за вами."
+)
 LEAD_BIND_REQUEST_REJECTED_TEXT = "Запрос отклонен."
 LEAD_BIND_REQUEST_NOT_FOUND_TEXT = "Запрос не найден или уже обработан."
 
@@ -167,11 +194,14 @@ NOTIFICATION_SETTINGS_SUCCESS_TEXT = (
     "• часовой пояс: {timezone}"
 )
 NOTIFICATION_SETTINGS_FORMAT_ERROR_TEXT = (
-    "Неверный формат. Отправьте настройки так:\n"
-    "<code>09:00 18:00 Europe/Moscow</code>"
+    "Неверный формат. Отправьте настройки так:\n<code>09:00 18:00 Europe/Moscow</code>"
 )
-NOTIFICATION_SETTINGS_TIME_ERROR_TEXT = "Некорректное время. Используйте формат HH:MM, например 09:00."
-NOTIFICATION_SETTINGS_TIMEZONE_ERROR_TEXT = "Некорректный часовой пояс. Пример: Europe/Moscow."
+NOTIFICATION_SETTINGS_TIME_ERROR_TEXT = (
+    "Некорректное время. Используйте формат HH:MM, например 09:00."
+)
+NOTIFICATION_SETTINGS_TIMEZONE_ERROR_TEXT = (
+    "Некорректный часовой пояс. Пример: Europe/Moscow."
+)
 
 NOTIFICATION_SETTINGS_ORDER_ERROR_TEXT = (
     "Некорректный порядок времени. "
