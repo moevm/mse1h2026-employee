@@ -23,6 +23,19 @@ class AcceptedTaskRecord:
 
 
 class AcceptedTasksService:
+    HEADERS = [
+        "ReportID",
+        "TelegramID",
+        "Date",
+        "TasksDone",
+        "Description",
+        "Problems",
+        "Status",
+        "ManagerFeedback",
+        "Deadline",
+        "ClosedAt"
+    ]
+    
     def __init__(self, sheets_client: GoogleSheetsClient, accepted_tasks_sheet_name: str):
         self.sheets_client = sheets_client
         self.accepted_tasks_sheet_name = accepted_tasks_sheet_name
