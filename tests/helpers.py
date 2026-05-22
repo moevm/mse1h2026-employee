@@ -406,7 +406,6 @@ class FakeLeadMessage(FakeMessage):
 
 class FakeLeadAuthService:
     def __init__(
-        self, *, team: list[int] | None = None, add_manager_result: bool = True
         self,
         *,
         team: list[int] | None = None,
@@ -421,9 +420,6 @@ class FakeLeadAuthService:
     def get_team_members_for_manager(self, lead_id: int) -> list[int]:
         return list(self.team)
 
-    def add_manager_for_user(
-        self, employee_id: int, employee_role: Role, lead_id: int
-    ) -> bool:
     def get_notification_settings(self, tg_id: int, default_morning_time: str, default_evening_time: str, default_timezone: str) -> dict[str, str]:
         return dict(self.notification_settings.get(tg_id, {
             "morning_time": default_morning_time,
@@ -584,6 +580,7 @@ def make_report(
         2, f"report-{task_id}", task_id, employee_id, text, "2026-01-02", {}
     )
 
+
 def make_accepted_task(
     report_id: str = "report-task-1",
     *,
@@ -611,9 +608,6 @@ def make_accepted_task(
         assigned_at=assigned_at,
     )
 
-
-def make_report(task_id: str = "task-1", *, employee_id: int = 100, text: str = "Готово") -> ReportRecord:
-    return ReportRecord(2, f"report-{task_id}", task_id, employee_id, text, "2026-01-02", {})
 
 def make_request(
     token: str = "offer-1", *, lead_id: int = 200, author_id: int = 100
