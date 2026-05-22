@@ -173,6 +173,65 @@ class TasksService:
             return match.group(0)
         return value
 
+
+    @classmethod
+    def _parse_date(cls, value: str):
+        value = cls._date_part(value)
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _is_not_closed_status(status: str) -> bool:
+        return (status or "").strip().lower() not in {"accepted", "closed", "done"}
+
+    def list_tasks_assigned_to_between(self, employee_id: int, start_date, end_date) -> list[TaskRecord]:
+        tasks: list[TaskRecord] = []
+        for task in self.get_all_tasks():
+            if task.employee_id != employee_id:
+                continue
+            created_date = self._parse_date(task.created_at)
+            if created_date is None:
+                continue
+            if start_date <= created_date <= end_date:
+                tasks.append(task)
+        return list(reversed(tasks))
+
+    def list_open_overdue_tasks_for_employee(self, employee_id: int, reference_date) -> list[TaskRecord]:
+        tasks: list[TaskRecord] = []
+        for task in self.get_all_tasks():
+            if task.employee_id != employee_id:
+                continue
+            if not self._is_not_closed_status(task.status):
+                continue
+            deadline = self._parse_date(task.deadline)
+            if deadline is None or deadline > reference_date:
+                continue
+            created_date = self._parse_date(task.created_at)
+            if created_date is not None and created_date > reference_date:
+                continue
+            tasks.append(task)
+        return list(reversed(tasks))
+
+    def list_open_overdue_tasks_for_employee_between(self, employee_id: int, start_date, end_date) -> list[TaskRecord]:
+        tasks: list[TaskRecord] = []
+        for task in self.get_all_tasks():
+            if task.employee_id != employee_id:
+                continue
+            if not self._is_not_closed_status(task.status):
+                continue
+            deadline = self._parse_date(task.deadline)
+            if deadline is None or not (start_date <= deadline <= end_date):
+                continue
+            created_date = self._parse_date(task.created_at)
+            if created_date is not None and created_date > end_date:
+                continue
+            tasks.append(task)
+        return list(reversed(tasks))
+
     @staticmethod
     def _unique_titles(tasks: list[TaskRecord]) -> list[str]:
         titles: list[str] = []

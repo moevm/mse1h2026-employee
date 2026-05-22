@@ -34,11 +34,10 @@ def get_lead_main_keyboard():
     builder.button(text=Buttons.FINISH_WORK)
     builder.button(text=Buttons.LEAD_TASKS)
     builder.button(text=Buttons.LEAD_REPORTS)
-    builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
     builder.button(text=Buttons.LEAD_BIND_REQUESTS)
     builder.button(text=Buttons.NOTIFICATION_SETTINGS)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(2, 2, 2, 2, 1)
+    builder.adjust(2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -71,9 +70,10 @@ def get_lead_reports_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text=Buttons.LEAD_REPORTS_LIST)
     builder.button(text=Buttons.LEAD_DAILY_REPORTS)
+    builder.button(text=Buttons.LEAD_WEEKLY_REPORT)
     builder.button(text=Buttons.MAIN_MENU)
     builder.button(text=Buttons.EXIT)
-    builder.adjust(1, 1, 2)
+    builder.adjust(1, 1, 1, 2)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -148,12 +148,13 @@ def get_cancel_keyboard():
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_employee_selection_keyboard(employee_names: list[str]):
+def get_employee_selection_keyboard(employee_names: list[str], include_exit: bool = True):
     builder = ReplyKeyboardBuilder()
     for name in employee_names:
         builder.button(text=name)
     builder.button(text=Buttons.CANCEL)
-    builder.button(text=Buttons.EXIT)
+    if include_exit:
+        builder.button(text=Buttons.EXIT)
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
@@ -247,3 +248,10 @@ def get_manager_bind_action_keyboard(request_id: str) -> InlineKeyboardMarkup:
     )
     builder.adjust(2)
     return builder.as_markup()
+
+def get_week_period_selection_keyboard(period_labels: list[str]):
+    builder = ReplyKeyboardBuilder()
+    for label in period_labels:
+        builder.button(text=label)
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
