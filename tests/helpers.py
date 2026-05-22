@@ -4,17 +4,24 @@ from dataclasses import replace
 from typing import Any
 
 from conftest import FakeBot, FakeMessage, FakeState
+
 from roles import Role
+from services.daily_reports_service import DailyReportRecord
 from services.manager_binding_service import ManagerBindRequest
 from services.reports_service import ReportRecord
 from services.accepted_tasks_service import AcceptedTaskRecord
-from services.daily_reports_service import DailyReportRecord
 from services.task_request_service import TaskRequestRecord
 from services.tasks_service import TaskRecord
 
 
 class FakeVisitsService:
-    def __init__(self, *, start_result: bool = True, finish_result: bool = True, open_visit: bool = False):
+    def __init__(
+        self,
+        *,
+        start_result: bool = True,
+        finish_result: bool = True,
+        open_visit: bool = False,
+    ):
         self.start_result = start_result
         self.finish_result = finish_result
         self.open_visit = open_visit
@@ -49,7 +56,9 @@ class FakeAuthService:
     def get_user_ids_by_role(self, role: Role) -> list[int]:
         return list(self.lead_ids) if role == Role.LEAD else []
 
-    def get_manager_ids_for_user(self, tg_id: int, role: Role | None = None) -> list[int]:
+    def get_manager_ids_for_user(
+        self, tg_id: int, role: Role | None = None
+    ) -> list[int]:
         return list(self.manager_ids_by_key.get((tg_id, role), []))
 
     def get_active_role(self, tg_id: int) -> Role | None:
@@ -65,13 +74,20 @@ class FakeManagerBindingService:
         self.create_result = create_result
         self.create_calls: list[tuple[int, Role, int]] = []
 
-    def create_request(self, employee_id: int, employee_role: Role, lead_id: int) -> object | None:
+    def create_request(
+        self, employee_id: int, employee_role: Role, lead_id: int
+    ) -> object | None:
         self.create_calls.append((employee_id, employee_role, lead_id))
         return self.create_result
 
 
 class FakeTasksService:
-    def __init__(self, tasks: list[TaskRecord] | None = None, *, update_returns_none: bool = False):
+    def __init__(
+        self,
+        tasks: list[TaskRecord] | None = None,
+        *,
+        update_returns_none: bool = False,
+    ):
         self.tasks = {task.task_id: task for task in (tasks or [])}
         self.update_returns_none = update_returns_none
         self.list_calls: list[tuple[int, set[str] | None]] = []
@@ -84,23 +100,36 @@ class FakeTasksService:
     def _date_part(value: str) -> str:
         return str(value or "").strip()[:10]
 
-    def list_tasks_assigned_to(self, employee_id: int, statuses: set[str] | None = None) -> list[TaskRecord]:
+    def list_tasks_assigned_to(
+        self, employee_id: int, statuses: set[str] | None = None
+    ) -> list[TaskRecord]:
         self.list_calls.append((employee_id, statuses))
-        tasks = [task for task in self.tasks.values() if task.employee_id == employee_id]
+        tasks = [
+            task for task in self.tasks.values() if task.employee_id == employee_id
+        ]
         if statuses is not None:
             allowed = {status.strip().lower() for status in statuses}
-            tasks = [task for task in tasks if (task.status or "").strip().lower() in allowed]
+            tasks = [
+                task for task in tasks if (task.status or "").strip().lower() in allowed
+            ]
         return tasks
 
-    def list_completed_tasks_for_date(self, employee_id: int, report_date: str) -> list[TaskRecord]:
+    def list_completed_tasks_for_date(
+        self, employee_id: int, report_date: str
+    ) -> list[TaskRecord]:
         self.completed_calls.append((employee_id, report_date))
-        return list(reversed([
-            task
-            for task in self.tasks.values()
-            if task.employee_id == employee_id
-            and (task.status or "").strip().lower() in {"finished", "on consideration"}
-            and self._date_part(task.updated_at) == report_date
-        ]))
+        return list(
+            reversed(
+                [
+                    task
+                    for task in self.tasks.values()
+                    if task.employee_id == employee_id
+                    and (task.status or "").strip().lower()
+                    in {"finished", "on consideration"}
+                    and self._date_part(task.updated_at) == report_date
+                ]
+            )
+        )
 
     def list_in_process_tasks(self, employee_id: int) -> list[TaskRecord]:
         self.in_process_calls.append(employee_id)
@@ -136,11 +165,15 @@ class FakeReportsService:
 
 
 class FakeAcceptedTasksService:
-    def __init__(self, *, titles_by_key: dict[tuple[int, str], list[str]] | None = None):
+    def __init__(
+        self, *, titles_by_key: dict[tuple[int, str], list[str]] | None = None
+    ):
         self.titles_by_key = titles_by_key or {}
         self.title_calls: list[tuple[int, str]] = []
 
-    def list_task_titles_for_employee_on_date(self, employee_id: int, report_date: str) -> list[str]:
+    def list_task_titles_for_employee_on_date(
+        self, employee_id: int, report_date: str
+    ) -> list[str]:
         self.title_calls.append((employee_id, report_date))
         return list(self.titles_by_key.get((employee_id, report_date), []))
 
@@ -174,23 +207,30 @@ class FakeDailyReportsService:
         completed_tasks_titles: list[str],
         in_process_tasks_titles: list[str],
     ) -> tuple[str, bool]:
-        self.create_calls.append((
-            employee_id,
-            report_date,
-            work_done,
-            problems,
-            list(completed_tasks_titles),
-            list(in_process_tasks_titles),
-        ))
+        self.create_calls.append(
+            (
+                employee_id,
+                report_date,
+                work_done,
+                problems,
+                list(completed_tasks_titles),
+                list(in_process_tasks_titles),
+            )
+        )
         return "daily-report-id", self.was_updated
 
-    def list_reports_for_date(self, report_date: str, employee_ids: list[int] | None = None) -> list[DailyReportRecord]:
-        self.list_calls.append((report_date, list(employee_ids) if employee_ids is not None else None))
+    def list_reports_for_date(
+        self, report_date: str, employee_ids: list[int] | None = None
+    ) -> list[DailyReportRecord]:
+        self.list_calls.append(
+            (report_date, list(employee_ids) if employee_ids is not None else None)
+        )
         allowed = set(employee_ids) if employee_ids is not None else None
         return [
             report
             for report in self.reports
-            if report.report_date == report_date and (allowed is None or report.employee_id in allowed)
+            if report.report_date == report_date
+            and (allowed is None or report.employee_id in allowed)
         ]
 
     def count_missing_reports_for_employee_between(self, employee_id: int, report_dates) -> int:
@@ -206,7 +246,9 @@ class FakeTaskRequestService:
     def __init__(self):
         self.create_calls: list[tuple[str, str, list[int], int]] = []
 
-    def create_requests(self, title: str, description: str, manager_ids: list[int], author_id: int) -> int:
+    def create_requests(
+        self, title: str, description: str, manager_ids: list[int], author_id: int
+    ) -> int:
         self.create_calls.append((title, description, list(manager_ids), author_id))
         return len(set(manager_ids))
 
@@ -236,25 +278,37 @@ def make_task(
         deadline=deadline,
     )
 
+
 class FakeAuthUser:
     def __init__(self, tg_id: int, roles: list[Role]):
         self.tg_id = tg_id
         self.roles = roles
 
+
 class FakeSuperuserAuthService:
-    def __init__(self, *,
+    def __init__(
+        self,
+        *,
         users: list[FakeAuthUser] | None = None,
         can_superuser: dict[int, bool] | None = None,
         revoke_map: dict[tuple[int, Role], bool] | None = None,
         roles_after_revoke: dict[int, list[Role]] | None = None,
+        banned_ids: list[int] | None = None,
+        ban_result: bool = True,
+        unban_result: bool = True,
     ):
         self.users = users or []
         self.can_superuser = can_superuser or {}
         self.revoke_map = revoke_map or {}
         self.roles_after_revoke = roles_after_revoke or {}
+        self._banned_ids: list[int] = list(banned_ids or [])
+        self.ban_result = ban_result
+        self.unban_result = unban_result
 
         self.revoke_calls: list[tuple[int, Role]] = []
         self.get_user_roles_calls: list[int] = []
+        self.ban_calls: list[int] = []
+        self.unban_calls: list[int] = []
 
     def get_all_users(self) -> list[FakeAuthUser]:
         return list(self.users)
@@ -271,6 +325,28 @@ class FakeSuperuserAuthService:
     def get_user_roles(self, tg_id: int) -> list[Role]:
         self.get_user_roles_calls.append(tg_id)
         return list(self.roles_after_revoke.get(tg_id, []))
+
+    def is_banned(self, tg_id: int) -> bool:
+        return tg_id in self._banned_ids
+
+    def ban_user(self, tg_id: int) -> bool:
+        self.ban_calls.append(tg_id)
+        if self.ban_result:
+            self._banned_ids.append(tg_id)
+        return self.ban_result
+
+    def unban_user(self, tg_id: int) -> bool:
+        self.unban_calls.append(tg_id)
+        if self.unban_result and tg_id in self._banned_ids:
+            self._banned_ids.remove(tg_id)
+        return self.unban_result
+
+    def get_banned_users(self) -> list[int]:
+        return list(self._banned_ids)
+
+    def logout(self, tg_id: int) -> None:
+        pass
+
 
 class FakeRoleRequestService:
     def __init__(
@@ -299,7 +375,6 @@ class FakeRoleRequestService:
     def deny_request(self, tg_id: int, role: Role) -> bool:
         self.deny_calls.append((tg_id, role))
         return self.deny_map.get((tg_id, role.value), False)
-
 
 
 class FakeLeadState(FakeState):
@@ -459,7 +534,9 @@ class FakeLeadAcceptedTasksService:
 
 class FakeLeadTaskRequestService:
     def __init__(self, requests=None):
-        self.requests = {request.callback_token: request for request in (requests or [])}
+        self.requests = {
+            request.callback_token: request for request in (requests or [])
+        }
         self.deleted: list[str] = []
         self.deleted_related: list[str] = []
 
@@ -496,6 +573,14 @@ class FakeLeadManagerBindingService:
         self.requests.pop(request_id, None)
 
 
+def make_report(
+    task_id: str = "task-1", *, employee_id: int = 100, text: str = "Готово"
+) -> ReportRecord:
+    return ReportRecord(
+        2, f"report-{task_id}", task_id, employee_id, text, "2026-01-02", {}
+    )
+
+
 def make_accepted_task(
     report_id: str = "report-task-1",
     *,
@@ -524,16 +609,21 @@ def make_accepted_task(
     )
 
 
-def make_report(task_id: str = "task-1", *, employee_id: int = 100, text: str = "Готово") -> ReportRecord:
-    return ReportRecord(2, f"report-{task_id}", task_id, employee_id, text, "2026-01-02", {})
+def make_request(
+    token: str = "offer-1", *, lead_id: int = 200, author_id: int = 100
+) -> TaskRequestRecord:
+    return TaskRequestRecord(
+        2, token, "Предложение", "Описание", lead_id, author_id, "new", "2026-01-01"
+    )
 
 
-def make_request(token: str = "offer-1", *, lead_id: int = 200, author_id: int = 100) -> TaskRequestRecord:
-    return TaskRequestRecord(2, token, "Предложение", "Описание", lead_id, author_id, "new", "2026-01-01")
+def make_bind_request(
+    request_id: str = "bind-1", *, lead_id: int = 200, employee_id: int = 100
+) -> ManagerBindRequest:
+    return ManagerBindRequest(
+        request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01"
+    )
 
-
-def make_bind_request(request_id: str = "bind-1", *, lead_id: int = 200, employee_id: int = 100) -> ManagerBindRequest:
-    return ManagerBindRequest(request_id, employee_id, Role.EMPLOYEE, lead_id, "2026-01-01")
 
 def make_daily_report(
     report_id: str = "daily-1",
