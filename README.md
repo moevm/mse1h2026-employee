@@ -71,7 +71,7 @@ pip install aiogram apscheduler gspread google-auth python-dotenv
 ```bash
 source .venv/bin/activate      # Linux / macOS
 call .venv\Scripts\activate    # Windows
-python main.py
+python ./srv/main.py
 ```
 
 Теперь необходимо открыть бота в Telegram и отправить ему команду `/start`
