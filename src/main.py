@@ -23,6 +23,7 @@ from services.visits_service import VisitsService
 from services.reports_service import ReportsService
 from services.daily_reports_service import DailyReportsService
 from services.accepted_tasks_service import AcceptedTasksService
+from services.cleanup_service import CleanupService
 from services.manager_binding_service import ManagerBindingService
 
 
@@ -62,6 +63,16 @@ async def main():
     tasks_service = TasksService(
         sheets_client=sheets_client,
         tasks_sheet_name=config.sheets.tasks_sheet_name,
+    )
+
+    cleanup_service = CleanupService(
+        sheets_client=sheets_client,
+        task_requests_sheet_name=config.sheets.task_requests_sheet_name,
+        role_requests_sheet_name=config.sheets.role_requests_sheet_name,
+        manager_bind_requests_sheet_name=config.sheets.manager_bind_requests_sheet_name,
+        reports_sheet_name=config.sheets.reports_sheet_name,
+        visits_sheet_name=config.sheets.visits_sheet_name,
+        accepted_tasks_sheet_name=config.sheets.accepted_tasks_sheet_name,
     )
 
     reminder_service = ReminderService(
@@ -124,11 +135,13 @@ async def main():
     dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
     dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
 
+    cleanup_service.start()
     await reminder_service.start(bot)
     try:
         await dp.start_polling(bot)
     finally:
         await reminder_service.stop()
+        cleanup_service.stop()
 
 
 if __name__ == "__main__":
