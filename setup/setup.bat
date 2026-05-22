@@ -26,6 +26,9 @@ echo Установка зависимостей...
 python -m pip install --upgrade pip >nul 2>&1
 pip install -r requirements.txt
 
+echo Инициализация таблиц Google Sheets...
+python3 setup/init_tables.py
+
 echo Проверка суперпользователя...
 python setup\init_superuser.py
 if %ERRORLEVEL% NEQ 0 (

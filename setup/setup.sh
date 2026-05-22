@@ -28,6 +28,9 @@ echo "Установка зависимостей..."
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 
+echo "Инициализация таблиц Google Sheets..."
+python3 setup/init_tables.py
+
 echo "Проверка суперпользователя..."
 python3 setup/init_superuser.py
 
