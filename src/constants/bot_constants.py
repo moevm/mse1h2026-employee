@@ -4,7 +4,7 @@ class Buttons:
     BACK = "Назад"
 
     REQUEST_INTERN = "<Стажёр>"
-    REQUEST_EMPLOYEE = "<Сотрудник>"   
+    REQUEST_EMPLOYEE = "<Сотрудник>"
     REQUEST_LEAD = "<Руководитель>"
     REQUEST_SUPERUSER = "<Администратор>"
 
@@ -15,6 +15,7 @@ class Buttons:
 
     SUPERUSER_ROLE_REQUESTS = "Список запросов ролей"
     SUPERUSER_BAN_USER = "Заблокировать пользователя"
+    SUPERUSER_UNBAN_USER = "Разблокировать пользователя"
     SUPERUSER_LEAD_MENU = "Меню руководителя"
     SUPERUSER_REVOKE_ROLE = "Отозвать роль"
 
@@ -51,7 +52,6 @@ class Buttons:
     TASK_ACCEPT = "Принять"
     TASK_FINISH = "Завершить"
     TASK_REPORT = "Отправить отчет"
-    
 
 
 class Callbacks:

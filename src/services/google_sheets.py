@@ -28,19 +28,29 @@ class GoogleSheetsClient:
 
         self.client = gspread.authorize(credentials)
         self.spreadsheet = self.client.open_by_key(sheet_id)
+        self._worksheets: dict[str, Any] = {}
 
     def get_worksheet(self, sheet_name: str):
-        return self.spreadsheet.worksheet(sheet_name)
+        worksheet = self._worksheets.get(sheet_name)
+        if worksheet is None:
+            worksheet = self.spreadsheet.worksheet(sheet_name)
+            self._worksheets[sheet_name] = worksheet
+        return worksheet
 
     def get_or_create_worksheet(self, sheet_name: str, rows: int = 1000, cols: int = 20):
+        worksheet = self._worksheets.get(sheet_name)
+        if worksheet is not None:
+            return worksheet
         try:
-            return self.spreadsheet.worksheet(sheet_name)
+            worksheet = self.spreadsheet.worksheet(sheet_name)
         except WorksheetNotFound:
-            return self.spreadsheet.add_worksheet(
+            worksheet = self.spreadsheet.add_worksheet(
                 title=sheet_name,
                 rows=rows,
                 cols=cols,
             )
+        self._worksheets[sheet_name] = worksheet
+        return worksheet
 
     def ensure_headers(self, sheet_name: str, headers: list[str]):
         worksheet = self.get_or_create_worksheet(
@@ -144,5 +154,5 @@ class GoogleSheetsClient:
         return sum(end_row - start_row + 1 for start_row, end_row in ranges)
 
     def update_cell(self, sheet_name: str, row: int, col: int, value: str) -> None:
-        worksheet = self.spreadsheet.worksheet(sheet_name)
+        worksheet = self.get_worksheet(sheet_name)
         worksheet.update_cell(row, col, value)
