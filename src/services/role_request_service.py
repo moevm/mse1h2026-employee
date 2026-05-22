@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from roles import Role
 from services.google_sheets import GoogleSheetsClient
 from services.auth_service import AuthService
@@ -11,8 +13,9 @@ class RoleRequestService:
         self.role_requests_sheet_name = role_requests_sheet_name
 
     def create_request(self, tg_id: int, role: Role):
+        created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         self.sheets_client.append_row(
-            self.role_requests_sheet_name, [tg_id, role.value]
+            self.role_requests_sheet_name, [tg_id, role.value, created_at]
         )
 
     def get_all_requests(self) -> list[dict[str, str]]:

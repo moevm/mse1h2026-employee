@@ -20,7 +20,8 @@ LEAD_TASKS_TEXT = "Задачи\n\nВыберите действие с зада
 
 LEAD_REPORTS_TEXT = "Отчеты\n\nВыберите действие с отчетами."
 
-LEAD_WEEKLY_TEXT = "Недельный отчет\n\nВведите сотрудника одним сообщением."
+LEAD_WEEKLY_TEXT = "Недельный отчет\n\nВыберите сотрудника, по которому нужно сформировать отчет."
+LEAD_WEEKLY_PERIOD_TEXT = "Выберите период для недельного отчета."
 
 EMPLOYEE_MENU_TEXT = "Ваша роль: сотрудник\n\nВыберите действие:"
 
@@ -86,9 +87,23 @@ LEAD_VIEW_REPORT_SUCCESS = "Отчет по задаче '{task_title}'"
 LEAD_CONFIRM_REPORT_SUCCESS = "Отчет по задаче '{task_title}' успешно принят."
 LEAD_REPORT_NOT_FOUND_TEXT = "Отчет не найден."
 LEAD_WEEKLY_SUCCESS = "Недельный отчет о сотруднике создан."
-LEAD_REJECT_REPORT_PROMPT = (
-    "Введите комментарий к отклоненному отчету одним сообщением."
+
+LEAD_WEEKLY_NO_EMPLOYEES_TEXT = "Нет сотрудников или стажеров, прикрепленных к вам."
+LEAD_WEEKLY_INVALID_EMPLOYEE_TEXT = "Используйте кнопки ниже."
+LEAD_WEEKLY_INVALID_PERIOD_TEXT = "Выберите период кнопкой ниже."
+LEAD_WEEKLY_RESULT_TEXT = (
+    "<b>Недельный отчет по сотруднику:</b> {employee_label}\n"
+    "<b>Период:</b> {week_start} — {week_end}\n\n"
+    "<b>Закрытые задачи:</b> {closed_tasks_count}\n"
+    "{closed_tasks_list}\n\n"
+    "<b>Назначенные задачи:</b> {assigned_tasks_count}\n"
+    "{assigned_tasks_list}\n\n"
+    "<b>Задачи с просроченным дедлайном:</b> {overdue_tasks_count}\n"
+    "{overdue_tasks_list}\n\n"
+    "<b>Отработанных часов:</b> {worked_hours}\n\n"
+    "<b>Дней без созданного отчета:</b> {missing_daily_reports_count}"
 )
+LEAD_REJECT_REPORT_PROMPT = "Введите комментарий к отклоненному отчету одним сообщением."
 LEAD_REJECT_REPORT_SUCCESS = "Отчет успешно отправлен на доработку."
 LEAD_REJECT_COMMENT_EMPTY = "Комментарий пустой. Введите комментарий еще раз."
 

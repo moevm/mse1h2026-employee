@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from datetime import date
+
 from services.accepted_tasks_service import AcceptedTasksService
 from services.daily_reports_service import DailyReportsService
+from services.tasks_service import TasksService
+from services.visits_service import VisitsService
 
 
 class FakeSheetsClient:
@@ -117,3 +121,63 @@ def test_accepted_tasks_service_returns_unique_titles_for_employee_and_date():
         "Принятая",
         "Еще одна",
     ]
+
+
+def test_weekly_report_services_count_tasks_hours_overdue_and_missing_reports():
+    sheets = FakeSheetsClient(
+        {
+            "Принятые задачи": [
+                ["ReportID", "TelegramID", "Date", "TasksDone", "Description", "Problems", "Status", "ManagerFeedback", "Deadline", "ClosedAt", "AssignedAt"],
+                ["r1", "100", "2026-05-18 18:10:00", "Задача 1", "Описание 1", "", "accepted", "", "2026-05-20", "2026-05-18 18:10:00", "2026-05-18 09:00:00"],
+                ["r2", "100", "2026-05-20", "Задача 2", "Описание 2", "", "accepted", "", "2026-05-19", "2026-05-20 19:00:00", "2026-05-18 09:30:00"],
+                ["r3", "100", "2026-05-18", "Просрочка со старым дедлайном", "", "", "accepted", "", "2026-05-17", "2026-05-18", "2026-05-15"],
+                ["r6", "100", "2026-05-22", "Закрыта позже по дедлайну недели", "", "", "accepted", "", "2026-05-20", "2026-05-22", "2026-05-18"],
+                ["r4", "101", "2026-05-18", "Чужая", "", "", "accepted", "", "2026-05-18", "2026-05-18", "2026-05-18"],
+                ["r5", "100", "2026-05-19", "Не принята", "", "", "rejected", "", "2026-05-18", "2026-05-19", "2026-05-18"],
+            ],
+            "Задачи": [
+                ["TaskId", "Title", "Description", "EmployeeID", "AuthorID", "Status", "CreatedAt", "UpdatedAt", "Deadline"],
+                ["t1", "Назначенная", "Описание назначенной", "100", "200", "created", "2026-05-18 10:00:00", "2026-05-18 10:00:00", "2026-05-30"],
+                ["t2", "Открытая просрочка", "Описание просрочки", "100", "200", "in process", "2026-05-01", "2026-05-18", "2026-05-18"],
+                ["t5", "Старый дедлайн", "Не попадает в выбранную неделю", "100", "200", "in process", "2026-05-01", "2026-05-18", "2026-05-17"],
+                ["t3", "Будущая", "Описание будущей", "100", "200", "in process", "2026-05-19", "2026-05-19", "2026-05-25"],
+                ["t4", "Чужая", "", "101", "200", "created", "2026-05-18", "2026-05-18", "2026-05-18"],
+            ],
+            "Посещения": [
+                ["Telegram ID", "StartedAt", "EndedAt"],
+                ["100", "2026-05-18 09:03:00", "2026-05-18 17:03:00"],
+                ["100", "2026-05-19 09:12:00", "2026-05-19 17:42:00"],
+                ["101", "2026-05-18 10:00:00", "2026-05-18 11:00:00"],
+                ["100", "2026-05-17 09:00:00", "2026-05-17 10:00:00"],
+            ],
+            "Ежедневные отчеты": [
+                DailyReportsService.HEADERS,
+                ["d1", "100", "2026-05-18", "Работа", "", "1", "Задача 1", "0", "", "2026-05-18 18:00:00"],
+                ["d2", "101", "2026-05-19", "Чужой", "", "1", "X", "0", "", "2026-05-19 18:00:00"],
+            ],
+        }
+    )
+
+    accepted = AcceptedTasksService(sheets, "Принятые задачи")
+    tasks = TasksService(sheets, "Задачи")
+    visits = VisitsService(sheets, "Посещения")
+    daily_reports = DailyReportsService(sheets, "Ежедневные отчеты")
+
+    week_start = date(2026, 5, 18)
+    week_end = date(2026, 5, 20)
+    report_dates = [date(2026, 5, 18), date(2026, 5, 19), date(2026, 5, 20)]
+
+    closed = accepted.list_closed_tasks_for_employee_between(100, week_start, week_end)
+    assert [task.task_title for task in closed] == ["Задача 1", "Задача 2", "Просрочка со старым дедлайном"]
+    assert closed[0].assigned_at == "2026-05-18 09:00:00"
+    assert accepted.count_closed_tasks_for_employee_between(100, week_start, week_end) == 3
+    overdue_closed = accepted.list_closed_overdue_tasks_for_employee_between(100, week_start, week_end)
+    assert [task.task_title for task in overdue_closed] == ["Задача 2", "Закрыта позже по дедлайну недели"]
+
+    assigned = tasks.list_tasks_assigned_to_between(100, week_start, week_end)
+    assert [task.title for task in assigned] == ["Будущая", "Назначенная"]
+    open_overdue = tasks.list_open_overdue_tasks_for_employee_between(100, week_start, week_end)
+    assert [task.title for task in open_overdue] == ["Открытая просрочка"]
+
+    assert visits.sum_worked_hours_for_employee_between(100, week_start, week_end) == 16.5
+    assert daily_reports.count_missing_reports_for_employee_between(100, report_dates) == 2
