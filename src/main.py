@@ -2,6 +2,8 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+import os
+from aiogram.client.session.aiohttp import AiohttpSession
 
 from config import load_config
 from handlers.auth import setup_auth_router
@@ -41,7 +43,9 @@ async def main():
     if not config.sheets.sheet_id:
         raise ValueError("GOOGLE_SHEET_ID не найден в .env")
 
-    bot = Bot(token=config.bot.token)
+    tg_proxy = os.getenv("TG_PROXY")
+    session = AiohttpSession(proxy=tg_proxy) if tg_proxy else AiohttpSession()
+    bot = Bot(token=config.bot.token, session=session)
     dp = Dispatcher()
 
     sheets_client = GoogleSheetsClient(
