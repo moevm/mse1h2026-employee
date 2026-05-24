@@ -55,6 +55,7 @@ pip install aiogram apscheduler gspread google-auth python-dotenv
 | `BOT_TOKEN` | Токен Telegram-бота | `123456789:ABCDEFGHIGKLMNOPQRSTUVWXYZ123456789` |
 | `GOOGLE_CREDENTIALS_PATH` | Путь к JSON-ключу сервисного аккаунта | `credentials.json` |
 | `GOOGLE_SHEET_ID` | ID Google Таблицы | `123456789ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghi` |
+| `TG_PROXY` | Порт системного прокси. Если он не используется, оставить пустым | `http://127.0.0.1:2080` |
 | `ROLES_SHEET_NAME` | Имя листа с ролями | `Роли` |
 | `TASK_REQUESTS_SHEET_NAME` | Имя листа с запросами задач | `Запросы задач` |
 | `TASKS_SHEET_NAME` | Имя листа с задачами | `Задачи` |
@@ -75,6 +76,30 @@ python ./srv/main.py
 ```
 
 Теперь необходимо открыть бота в Telegram и отправить ему команду `/start`
+
+## Использование Docker
+Для сборки проекта перейдите в его директорию и используйте команду
+```bash
+sudo docker build -t mse-employee-bot .
+```
+
+После завершения сборки для запуска проекта используйте команду
+```bash
+sudo docker run -d --name employee-bot --env-file .env --network=host -v $(pwd)/credentials.json:/app/src/credentials.json:ro --restart unless-stopped mse-employee-bot
+```
+Если в системе настроена группа docker sudo можно опустить
+
+## Проверка корректности сборки и запуска
+При сборке необходимо обратить внимание на отсутствие логов с меткой ERROR. Если они не появились, сборка прошла корректно. Примеры логов сборки можно просмотреть в [этой директории](https://github.com/moevm/mse1h2026-employee/tree/main/log_examples)
+
+После корректной сборки и запуска приложения нужно также проверить логи на предмет отсутствия логов с меткой ERROR. Пример с началом корректного лога запуска в той же директории, что и для сборки
+
+На этом этапе часто возникают ошибки с прокси. Если он не нужен для функционирования приложения, рекомендуем его отключить. В противном случае проблема может быть связана с некорректным портом прокси или его блокировками.
+
+Проверить на каком порту запущен прокси для TCP можно командой:
+```bash
+sudo ss -tlnp
+```
 
 ## Структура таблиц
 
