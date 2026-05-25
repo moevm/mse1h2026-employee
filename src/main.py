@@ -1,8 +1,8 @@
 import asyncio
 import logging
+import os
 
 from aiogram import Bot, Dispatcher
-import os
 from aiogram.client.session.aiohttp import AiohttpSession
 
 from config import load_config
@@ -16,6 +16,8 @@ from handlers.superuser import setup_superuser_router
 from handlers.task_request import setup_task_request_router
 from services.accepted_tasks_service import AcceptedTasksService
 from services.auth_service import AuthService
+from services.cleanup_service import CleanupService
+from services.daily_reports_service import DailyReportsService
 from services.google_sheets import GoogleSheetsClient
 from services.manager_binding_service import ManagerBindingService
 from services.reminder_service import ReminderService
@@ -24,13 +26,6 @@ from services.role_request_service import RoleRequestService
 from services.task_request_service import TaskRequestService
 from services.tasks_service import TasksService
 from services.visits_service import VisitsService
-
-from services.reports_service import ReportsService
-from services.daily_reports_service import DailyReportsService
-from services.accepted_tasks_service import AcceptedTasksService
-from services.cleanup_service import CleanupService
-from services.manager_binding_service import ManagerBindingService
-
 
 
 async def main():
@@ -129,6 +124,7 @@ async def main():
         )
     )
     dp.include_router(setup_superuser_router(auth_service, role_request_service))
+
     dp.include_router(
         setup_lead_router(
             auth_service,
@@ -138,6 +134,11 @@ async def main():
             accepted_tasks_service,
             task_request_service,
             manager_binding_service,
+            daily_reports_service,
+            default_morning_time=config.reminders.morning_time,
+            default_evening_time=config.reminders.evening_time,
+            default_timezone=config.reminders.timezone,
+            default_days_of_week=config.reminders.days_of_week,
         )
     )
     dp.include_router(
@@ -147,6 +148,8 @@ async def main():
             tasks_service,
             reports_service,
             manager_binding_service,
+            accepted_tasks_service,
+            daily_reports_service,
         )
     )
     dp.include_router(
@@ -156,25 +159,10 @@ async def main():
             tasks_service,
             reports_service,
             manager_binding_service,
+            accepted_tasks_service,
+            daily_reports_service,
         )
     )
-    dp.include_router(setup_lead_router(auth_service, tasks_service, visits_service, reports_service, accepted_tasks_service, task_request_service, manager_binding_service, daily_reports_service))
-    dp.include_router(setup_lead_router(
-        auth_service,
-        tasks_service,
-        visits_service,
-        reports_service,
-        accepted_tasks_service,
-        task_request_service,
-        manager_binding_service,
-        daily_reports_service,
-        default_morning_time=config.reminders.morning_time,
-        default_evening_time=config.reminders.evening_time,
-        default_timezone=config.reminders.timezone,
-        default_days_of_week=config.reminders.days_of_week,
-    ))
-    dp.include_router(setup_employee_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
-    dp.include_router(setup_intern_router(auth_service, visits_service, tasks_service, reports_service, manager_binding_service, accepted_tasks_service, daily_reports_service))
 
     cleanup_service.start()
     await reminder_service.start(bot)
