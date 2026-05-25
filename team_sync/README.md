@@ -7,3 +7,4 @@
 * [Командный созвон №2 (итерация 2)](https://github.com/moevm/mse1h2026-employee/blob/reports/team_sync/Командный%20созвон%20№2%20(23.03).md)
 * [Командный созвон №3 (итерация 3)](https://github.com/moevm/mse1h2026-employee/blob/reports/team_sync/Командный%20созвон%20№3%20(18.04).md)
 * [Командный созвон №4 (итерация 3)](https://github.com/moevm/mse1h2026-employee/blob/reports/team_sync/Командный%20созвон%20№4%20(03.05).md)
+* [Командный созвон №5 (итерация 4)](https://github.com/moevm/mse1h2026-employee/blob/reports/team_sync/Командный%20созвон%20№5%20(23.05).md)
