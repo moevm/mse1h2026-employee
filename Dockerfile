@@ -25,13 +25,15 @@ RUN pip install --no-cache-dir \
 
 COPY requirements.txt /app/requirements.txt
 COPY docker_constraints.txt /app/docker_constraints.txt
- 
+COPY credentials.json /app/credentials.json
+
 RUN pip install --no-cache-dir \
         -c /app/docker_constraints.txt \
         -r /app/requirements.txt
 
 COPY src/ /app/src/
-COPY pytest.ini /app/pytest.ini
+COPY setup/ /app/setup/
+RUN chmod +x /app/setup/docker_entrypoint.sh
 
 RUN groupadd --system --gid 1001 botgroup \
     && useradd --system --uid 1001 --gid botgroup --home-dir /app --shell /usr/sbin/nologin botuser \
@@ -39,9 +41,8 @@ RUN groupadd --system --gid 1001 botgroup \
 
 USER botuser
 
-WORKDIR /app/src
-
+WORKDIR /app
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD pgrep -f "python.*main.py" > /dev/null || exit 1
 
-CMD ["python", "main.py"]
+ENTRYPOINT ["/app/setup/docker_entrypoint.sh"]
