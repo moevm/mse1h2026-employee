@@ -10,6 +10,13 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
+echo Проверка Python venv...
+python -c "import ensurepip" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo Ошибка: модуль venv не найден. Переустановите Python с опцией "pip" или установите python3-venv.
+    exit /b 1
+)
+
 if not exist ".env" (
     echo Ошибка: .env не найден.
     exit /b 1
