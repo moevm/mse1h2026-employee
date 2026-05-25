@@ -12,6 +12,13 @@ else
     exit 1
 fi
 
+if python3 -c "import ensurepip" &>/dev/null; then
+    echo "Python venv найден."
+else
+    echo "Ошибка: модуль venv не найден. Установите пакет python3-venv."
+    exit 1
+fi
+
 if [ ! -f ".env" ]; then
     echo "Ошибка: .env не найден."
     exit 1
