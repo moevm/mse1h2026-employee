@@ -12,6 +12,8 @@
 1. Для Linux и macOs: setup.sh
 2. Для Windows: setup.bat
 
+При ошибках во время создания .venv обратитесь к этому пункту: 2. Создание виртуального окружения
+
 Или выполнить ручную установку
 
 > Скрипты `setup/setup.sh` и `setup/setup.bat` также выполняют инициализацию структуры Google Sheets (создание листов и заголовков колонок) через `setup/init_tables.py`.
@@ -31,17 +33,16 @@ python3 -m venv .venv
 source .venv/bin/activate      # Linux / macOS
 call .venv\Scripts\activate    # Windows
 ```
+Если Вы только установили python3-venv, может возникнуть ошибка вида:
+```
+./setup/setup.sh: line 30: .venv/bin/activate: No such file or directory
+```
+В этом случае Вам необходимо удалить содержимое .venv, перезапустить машину и выполнить операцию повторно.
 
 ### 3. Установка зависимостей
 
 ```bash
 pip install -r requirements.txt
-```
-
-Если файл `requirements.txt` отсутствует, установите зависимости вручную:
-
-```bash
-pip install aiogram apscheduler gspread google-auth python-dotenv
 ```
 
 ### 4. Конфигурация проекта
@@ -55,6 +56,7 @@ pip install aiogram apscheduler gspread google-auth python-dotenv
 | `BOT_TOKEN` | Токен Telegram-бота | `123456789:ABCDEFGHIGKLMNOPQRSTUVWXYZ123456789` |
 | `GOOGLE_CREDENTIALS_PATH` | Путь к JSON-ключу сервисного аккаунта | `credentials.json` |
 | `GOOGLE_SHEET_ID` | ID Google Таблицы | `123456789ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghi` |
+| `TG_PROXY` | Порт системного прокси. Если он не используется, оставить пустым | `http://127.0.0.1:2080` |
 | `ROLES_SHEET_NAME` | Имя листа с ролями | `Роли` |
 | `TASK_REQUESTS_SHEET_NAME` | Имя листа с запросами задач | `Запросы задач` |
 | `TASKS_SHEET_NAME` | Имя листа с задачами | `Задачи` |
@@ -75,6 +77,54 @@ python ./srv/main.py
 ```
 
 Теперь необходимо открыть бота в Telegram и отправить ему команду `/start`
+
+## Использование Docker
+Если Docker не установлен на машине выполните следующие команды:
+```bash
+# Add Docker's official GPG key:
+sudo apt update
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Для сборки проекта перейдите в его директорию и используйте команду
+```bash
+sudo docker build -t mse-employee-bot .
+```
+
+После завершения сборки для запуска проекта используйте команду
+```bash
+sudo docker run -d --name employee-bot --env-file .env --network=host -v $(pwd)/credentials.json:/app/src/credentials.json:ro --restart unless-stopped mse-employee-bot
+```
+Если в системе настроена группа docker sudo можно опустить
+
+## Проверка корректности сборки и запуска
+При сборке необходимо обратить внимание на отсутствие логов с меткой ERROR. Если они не появились, сборка прошла корректно. Примеры логов сборки можно просмотреть в [этой директории](https://github.com/moevm/mse1h2026-employee/tree/main/log_examples)
+
+После корректной сборки и запуска приложения нужно также проверить логи на предмет отсутствия логов с меткой ERROR. Пример с началом корректного лога запуска в той же директории, что и для сборки. Если вы осуществляете запуск проекта через Docker в начале логов может быть информация о сборке проекта
+
+На этом этапе часто возникают ошибки с прокси. Если он не нужен для функционирования приложения, рекомендуем его отключить. В противном случае проблема может быть связана с некорректным портом прокси или его блокировками.
+
+Проверить на каком порту запущен прокси для TCP можно командой:
+```bash
+sudo ss -tlnp
+```
 
 ## Структура таблиц
 
